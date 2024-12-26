@@ -80,7 +80,9 @@ body {
 }
 
 .app-layout {
+  padding: 1rem;
   display: grid;
+  gap: 0.25rem;
 }
 
 pre {
