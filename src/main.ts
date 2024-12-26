@@ -1,4 +1,4 @@
-import { BehaviorSubject, filter, fromEvent, map, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, filter, fromEvent, map, Observable, of, share, switchMap, tap } from "rxjs";
 import { AIBar } from "./lib/ai-bar/lib/ai-bar";
 import { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import type { TogetherAINode } from "./lib/ai-bar/lib/elements/together-ai-node";
@@ -23,15 +23,21 @@ const currentSceneXML = new BehaviorSubject("<scene></scene>");
 
 currentSceneXML.pipe(tap((xml) => (xmlPreview.textContent = xml))).subscribe();
 
+let submissionQueue: string[] = [];
+
 const submit$ = fromEvent<KeyboardEvent>(promptInput, "keydown").pipe(
   filter((e) => e.key === "Enter"),
   map((e) => promptInput.value),
   filter((v) => v.length > 0),
   tap(() => (promptInput.value = "")),
+  map((text) => [...submissionQueue, text]),
+  share(),
 );
 
-const updateScene$ = submit$.pipe(withLatestFrom(currentSceneXML)).pipe(
-  switchMap(([prompt, sceneXML]) => {
+const updateScene$ = submit$.pipe(
+  switchMap((inputs) => {
+    const sceneXML = currentSceneXML.value;
+    console.log({ inputs, sceneXML });
     return new Observable((subscriber) => {
       const llm = llmNode.getClient("aoai");
       const abortController = new AbortController();
@@ -51,8 +57,9 @@ Syntax guideline
 - Avoid nesting too much. Prefer simple, obvious tag names.
 - Use arbitrary xml tags and attributes. Prefer tags over attributes.
   - Use tags to describe subjects, objects, environments and entities.
-  - Use attribute to describe un-materialized property of a tag.
+  - Use attribute to describe un-materialized property of a tag, such as style, material, lighting.
 - Use concise natural language where description is needed.
+- Spatial relationship must be explicitly described.
 
 Now update the scene XML based on user provided instructions. You must use one of the following tools:
 - update_by_script tool. You need to pass a DOM manipulate javascript to the tool. 
@@ -60,7 +67,7 @@ Now update the scene XML based on user provided instructions. You must use one o
 
 Use exactly one tool. Do NOT say anything after tool use.
 `,
-            user`${prompt}`,
+            user`${inputs.join("; ")}`,
           ],
           model: "gpt-4o",
           tools: [
@@ -71,7 +78,7 @@ Use exactly one tool. Do NOT say anything after tool use.
                   console.log(`[tool] script`, args.script);
                   const fn = new Function("document", args.script);
                   try {
-                    const doc = new DOMParser().parseFromString(sceneXML, "application/xml");
+                    const doc = new DOMParser().parseFromString(currentSceneXML.value, "application/xml");
                     fn(doc);
                     const xml = new XMLSerializer().serializeToString(doc);
                     currentSceneXML.next(xml);
@@ -126,10 +133,13 @@ Use exactly one tool. Do NOT say anything after tool use.
         .finalContent()
         .then((content) => {
           messageOutput.textContent = content;
+          submissionQueue = submissionQueue.filter((v) => !inputs.includes(v));
           subscriber.next(content);
-          subscriber.complete();
         })
-        .catch((e) => console.error(e));
+        .catch((e) => console.error(e))
+        .finally(() => {
+          subscriber.complete();
+        });
 
       return () => abortController.abort();
     });
@@ -150,6 +160,7 @@ const imagePrompt$ = currentSceneXML.pipe(
               system`Convert the provided scene XML to a single paragraph of natural language description. Requirements:
 - Be thorough. Make sure every tag, attribute, and inner text is incorporated.
 - Do not imagine or infer unmentioned details.
+- Be concise. Do NOT add narrative or emotional description.
         `,
               user`${sceneXML}`,
             ],
@@ -172,7 +183,10 @@ const imagePrompt$ = currentSceneXML.pipe(
 );
 
 const generateImage$ = imagePrompt$.pipe(
-  switchMap((prompt) => togetherAINode.generateImageDataURL(prompt)),
+  switchMap((prompt) => {
+    if (prompt === "Empty scene") return of("https://placehold.co/400");
+    return togetherAINode.generateImageDataURL(prompt);
+  }),
   tap((url) => (imageOutput.src = url)),
 );
 
