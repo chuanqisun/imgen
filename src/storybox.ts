@@ -1,4 +1,4 @@
-import { BehaviorSubject, filter, fromEvent, map, Observable, switchMap, tap, withLatestFrom } from "rxjs";
+import { BehaviorSubject, filter, fromEvent, map, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
 import { AIBar } from "./lib/ai-bar/lib/ai-bar";
 import type { TogetherAINode } from "./lib/ai-bar/lib/elements/together-ai-node";
 import { loadAIBar } from "./lib/ai-bar/loader";
@@ -15,6 +15,9 @@ const llmNode = $<LlmNode>("llm-node")!;
 const xmlPreview = $<HTMLElement>("#xml-preview")!;
 const togetherAINode = $<TogetherAINode>("together-ai-node")!;
 const promptInput = $<HTMLInputElement>("#prompt")!;
+const messageOutput = $<HTMLElement>("#message-output")!;
+const imagePrompt = $<HTMLInputElement>("#image-prompt")!;
+const imageOutput = $<HTMLImageElement>("#image-output")!;
 
 const currentSceneXML = new BehaviorSubject("<scene></scene>");
 
@@ -47,8 +50,8 @@ Syntax guideline
 - Be hierarchical and efficient. Add details when asked by user.
 - Avoid nesting too much. Prefer simple, obvious tag names.
 - Use arbitrary xml tags and attributes
-- Prefer natural language over precise numbers in attribute value.
-- Tag inner text can be natural language or other tags.
+- Prefer concise natural language over precise numbers in attribute value.
+- Tag inner text can be concise natural language
 
 Now update the scene XML based on user provided instructions. You must use one of the following tools:
 - update_by_script tool. You need to pass a DOM manipulate javascript to the tool. 
@@ -71,10 +74,7 @@ Use exactly one tool. Do NOT say anything after tool use.
                     fn(doc);
                     const xml = new XMLSerializer().serializeToString(doc);
                     currentSceneXML.next(xml);
-                    return `Updated to 
-\`\`\`xml
-${xml}
-\`\`\``.trim();
+                    return `Done`;
                   } catch (e) {
                     return `Error: ${(e as any).message}`;
                   }
@@ -99,11 +99,7 @@ ${xml}
                   console.log(`[tool] rewrite`, args.xml);
 
                   currentSceneXML.next(args.xml);
-                  return `Scene XML updated to
-\`\`\`xml
-${args.xml}
-\`\`\`
-                  `.trim();
+                  return `Done`;
                 },
                 parse: JSON.parse,
                 description: "Rewrite the entire scene xml",
@@ -125,9 +121,58 @@ ${args.xml}
         },
       );
 
+      task
+        .finalContent()
+        .then((content) => {
+          messageOutput.textContent = content;
+          subscriber.next(content);
+          subscriber.complete();
+        })
+        .catch((e) => console.error(e));
+
       return () => abortController.abort();
     });
   }),
+);
+
+const imagePrompt$ = currentSceneXML.pipe(
+  switchMap((sceneXML) => {
+    if (sceneXML === "<scene></scene>") return of("Empty scene");
+
+    return new Observable<string>((subscriber) => {
+      const llm = llmNode.getClient("aoai");
+      const abortController = new AbortController();
+      llm.chat.completions
+        .create(
+          {
+            messages: [
+              system`Convert the provided scene XML to a single paragraph of natural language description. Requirements:
+- Be thorough. Make sure every tag, attribute, and inner text is incorporated.
+- Do not imagine or infer unmentioned details.
+        `,
+              user`${sceneXML}`,
+            ],
+            model: "gpt-4o",
+          },
+          { signal: abortController.signal },
+        )
+        .then((res) => {
+          const result = res.choices.at(0)?.message.content;
+          if (result) {
+            subscriber.next(result);
+          }
+          subscriber.complete();
+        });
+
+      return () => abortController.abort();
+    });
+  }),
+  tap((prompt) => (imagePrompt.textContent = prompt)),
+);
+
+const generateImage$ = imagePrompt$.pipe(
+  switchMap((prompt) => togetherAINode.generateImageDataURL(prompt)),
+  tap((url) => (imageOutput.src = url)),
 );
 
 const globalClick$ = fromEvent(document, "click").pipe(
@@ -141,3 +186,4 @@ const globalClick$ = fromEvent(document, "click").pipe(
 
 globalClick$.subscribe();
 updateScene$.subscribe();
+generateImage$.subscribe();
