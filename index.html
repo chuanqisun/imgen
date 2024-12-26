@@ -8,9 +8,11 @@
   </head>
 
   <body>
-    <input id="prompt" type="text" />
+    <div>
+      <input id="prompt" type="text" />
+      <span id="message-output"></span>
+    </div>
     <pre><code id="xml-preview"></code></pre>
-    <div id="message-output"></div>
     <div id="image-prompt"></div>
     <img id="image-output" />
 
@@ -29,6 +31,6 @@
       <azure-connection></azure-connection>
       <walkie-talkie-button></walkie-talkie-button>
     </ai-bar>
-    <script src="/src/storybox.ts" type="module"></script>
+    <script src="/src/main.ts" type="module"></script>
   </body>
 </html>

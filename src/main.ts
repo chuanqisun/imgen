@@ -1,12 +1,12 @@
 import { BehaviorSubject, filter, fromEvent, map, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
 import { AIBar } from "./lib/ai-bar/lib/ai-bar";
+import { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import type { TogetherAINode } from "./lib/ai-bar/lib/elements/together-ai-node";
+import { system, user } from "./lib/ai-bar/lib/message";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { $, parseActionEvent } from "./lib/dom";
 
-import { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
-import { system, user } from "./lib/ai-bar/lib/message";
-import "./storybox.css";
+import "./main.css";
 
 loadAIBar();
 
@@ -40,7 +40,7 @@ const updateScene$ = submit$.pipe(withLatestFrom(currentSceneXML)).pipe(
         {
           messages: [
             system`
-          You are a 3D model technical artist. The current scene looks like this:
+You are a 3D model technical artist. The current scene looks like this:
  
 \`\`\`xml
 ${sceneXML}         
@@ -49,9 +49,10 @@ ${sceneXML}
 Syntax guideline
 - Be hierarchical and efficient. Add details when asked by user.
 - Avoid nesting too much. Prefer simple, obvious tag names.
-- Use arbitrary xml tags and attributes
-- Prefer concise natural language over precise numbers in attribute value.
-- Tag inner text can be concise natural language
+- Use arbitrary xml tags and attributes. Prefer tags over attributes.
+  - Use tags to describe subjects, objects, environments and entities.
+  - Use attribute to describe un-materialized property of a tag.
+- Use concise natural language where description is needed.
 
 Now update the scene XML based on user provided instructions. You must use one of the following tools:
 - update_by_script tool. You need to pass a DOM manipulate javascript to the tool. 
