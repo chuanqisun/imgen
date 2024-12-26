@@ -83,47 +83,7 @@ body {
   display: grid;
 }
 
-.debug-layout {
-  display: grid;
-  grid-auto-flow: column;
-  justify-content: start;
-  position: relative;
-
-  img,
-  video,
-  canvas {
-    border: 1px solid black;
-    width: 400px;
-    height: 400px;
-  }
-
-  #debug-video {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100px;
-    height: 100px;
-    border: 1px solid red;
-  }
-}
-
-menu {
-  padding: 0;
-  display: flex;
-  gap: 0;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-main {
-  * {
-    display: none;
-  }
-
-  *:last-of-type {
-    width: 100%;
-    display: block;
-    opacity: 1;
-  }
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
