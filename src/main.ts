@@ -1,11 +1,12 @@
-import { BehaviorSubject, filter, fromEvent, map, Observable, of, share, switchMap, tap } from "rxjs";
-import { AIBar } from "./lib/ai-bar/lib/ai-bar";
+import { BehaviorSubject, filter, fromEvent, map, merge, Observable, of, switchMap, tap } from "rxjs";
+import { AIBar, type AIBarEventDetail } from "./lib/ai-bar/lib/ai-bar";
 import { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import type { TogetherAINode } from "./lib/ai-bar/lib/elements/together-ai-node";
 import { system, user } from "./lib/ai-bar/lib/message";
 import { loadAIBar } from "./lib/ai-bar/loader";
-import { $, parseActionEvent } from "./lib/dom";
+import { $, parseActionEvent, preventDefault, stopPropagation } from "./lib/dom";
 
+import type { AzureSttNode } from "./lib/ai-bar/lib/elements/azure-stt-node";
 import "./main.css";
 
 loadAIBar();
@@ -18,23 +19,57 @@ const promptInput = $<HTMLInputElement>("#prompt")!;
 const messageOutput = $<HTMLElement>("#message-output")!;
 const imagePrompt = $<HTMLInputElement>("#image-prompt")!;
 const imageOutput = $<HTMLImageElement>("#image-output")!;
+const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
+const talkButton = $<HTMLButtonElement>("#talk")!;
+
+let submissionQueue: string[] = [];
 
 const currentSceneXML = new BehaviorSubject("<scene></scene>");
 
-currentSceneXML.pipe(tap((xml) => (xmlPreview.textContent = xml))).subscribe();
+const renderXML$ = currentSceneXML.pipe(tap((xml) => (xmlPreview.textContent = xml)));
 
-let submissionQueue: string[] = [];
+talkButton.addEventListener(
+  "mousedown",
+  (e) => {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    azureSttNode.startMicrophone();
+    talkButton.textContent = "Hold to talk";
+  },
+  { once: true },
+);
+
+const holdToTalk$ = merge(
+  fromEvent(talkButton, "mousedown").pipe(
+    tap(() => {
+      azureSttNode.start();
+      talkButton.textContent = "Release to send";
+    }),
+  ),
+  fromEvent(talkButton, "mouseup").pipe(
+    tap(() => {
+      azureSttNode.stop();
+      talkButton.textContent = "Hold to talk";
+    }),
+  ),
+);
 
 const submit$ = fromEvent<KeyboardEvent>(promptInput, "keydown").pipe(
   filter((e) => e.key === "Enter"),
   map((e) => promptInput.value),
   filter((v) => v.length > 0),
   tap(() => (promptInput.value = "")),
-  map((text) => [...submissionQueue, text]),
-  share(),
 );
 
-const updateScene$ = submit$.pipe(
+const voiceSubmit$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "event").pipe(
+  tap(preventDefault),
+  tap(stopPropagation),
+  map((e) => (e as CustomEvent<AIBarEventDetail>).detail.recognized?.text as string),
+  filter((v) => !!v?.length),
+);
+
+const updateScene$ = merge(voiceSubmit$, submit$).pipe(
+  map((text) => [...submissionQueue, text]),
   switchMap((inputs) => {
     const sceneXML = currentSceneXML.value;
     console.log({ inputs, sceneXML });
@@ -202,3 +237,5 @@ const globalClick$ = fromEvent(document, "click").pipe(
 globalClick$.subscribe();
 updateScene$.subscribe();
 generateImage$.subscribe();
+holdToTalk$.subscribe();
+renderXML$.subscribe();
