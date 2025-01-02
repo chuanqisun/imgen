@@ -40,13 +40,19 @@ talkButton.addEventListener(
 );
 
 const holdToTalk$ = merge(
-  fromEvent(talkButton, "mousedown").pipe(
+  merge(
+    fromEvent(talkButton, "keydown").pipe(filter((e) => (e as KeyboardEvent).key === " ")),
+    fromEvent(talkButton, "mousedown"),
+  ).pipe(
     tap(() => {
       azureSttNode.start();
       talkButton.textContent = "Release to send";
     }),
   ),
-  fromEvent(talkButton, "mouseup").pipe(
+  merge(
+    fromEvent(talkButton, "keyup").pipe(filter((e) => (e as KeyboardEvent).key === " ")),
+    fromEvent(talkButton, "mouseup"),
+  ).pipe(
     tap(() => {
       azureSttNode.stop();
       talkButton.textContent = "Hold to talk";
@@ -220,7 +226,8 @@ const imagePrompt$ = currentSceneXML.pipe(
 const generateImage$ = imagePrompt$.pipe(
   switchMap((prompt) => {
     if (prompt === "Empty scene") return of("https://placehold.co/400");
-    return togetherAINode.generateImageDataURL(prompt);
+    const model = $<HTMLSelectElement>("#model")!.value;
+    return togetherAINode.generateImageDataURL(prompt, { model });
   }),
   tap((url) => (imageOutput.src = url)),
 );
