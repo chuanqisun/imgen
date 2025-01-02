@@ -74,6 +74,31 @@ const voiceSubmit$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "eve
   filter((v) => !!v?.length),
 );
 
+const updateByScript = function update_by_script(args: { script: string }) {
+  console.log(`[tool] script`, args.script);
+  const fn = new Function("document", args.script);
+  try {
+    const existingXml = currentSceneXML.value;
+    const doc = new DOMParser().parseFromString(currentSceneXML.value, "application/xml");
+    fn(doc);
+    const xml = new XMLSerializer().serializeToString(doc);
+    console.log(`[scene] updated`, { existingXml, newXml: xml });
+    currentSceneXML.next(xml);
+    return `Done`;
+  } catch (e) {
+    return `Error: ${(e as any).message}`;
+  }
+};
+Object.defineProperty(updateByScript, "name", { value: "update_by_script" }); // protect from bundler mangling
+
+const rewriteXml = function rewrite_xml(args: { xml: string }) {
+  console.log(`[tool] rewrite`, args.xml);
+
+  currentSceneXML.next(args.xml);
+  return `Done`;
+};
+Object.defineProperty(rewriteXml, "name", { value: "rewrite_xml" }); // protect from bundler mangling
+
 const updateScene$ = merge(voiceSubmit$, submit$).pipe(
   map((text) => [...submissionQueue, text]),
   switchMap((inputs) => {
@@ -115,21 +140,7 @@ Use exactly one tool. Do NOT say anything after tool use.
             {
               type: "function",
               function: {
-                function: function update_by_script(args: { script: string }) {
-                  console.log(`[tool] script`, args.script);
-                  const fn = new Function("document", args.script);
-                  try {
-                    const existingXml = currentSceneXML.value;
-                    const doc = new DOMParser().parseFromString(currentSceneXML.value, "application/xml");
-                    fn(doc);
-                    const xml = new XMLSerializer().serializeToString(doc);
-                    console.log(`[scene] updated`, { existingXml, newXml: xml });
-                    currentSceneXML.next(xml);
-                    return `Done`;
-                  } catch (e) {
-                    return `Error: ${(e as any).message}`;
-                  }
-                },
+                function: updateByScript,
                 parse: JSON.parse,
                 description: "Update the scene by executing a DOM manipulate javascript",
                 parameters: {
@@ -146,12 +157,7 @@ Use exactly one tool. Do NOT say anything after tool use.
             {
               type: "function",
               function: {
-                function: function rewrite_xml(args: { xml: string }) {
-                  console.log(`[tool] rewrite`, args.xml);
-
-                  currentSceneXML.next(args.xml);
-                  return `Done`;
-                },
+                function: rewriteXml,
                 parse: JSON.parse,
                 description: "Rewrite the entire scene xml",
                 parameters: {
