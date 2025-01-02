@@ -119,9 +119,11 @@ Use exactly one tool. Do NOT say anything after tool use.
                   console.log(`[tool] script`, args.script);
                   const fn = new Function("document", args.script);
                   try {
+                    const existingXml = currentSceneXML.value;
                     const doc = new DOMParser().parseFromString(currentSceneXML.value, "application/xml");
                     fn(doc);
                     const xml = new XMLSerializer().serializeToString(doc);
+                    console.log(`[scene] updated`, { existingXml, newXml: xml });
                     currentSceneXML.next(xml);
                     return `Done`;
                   } catch (e) {
