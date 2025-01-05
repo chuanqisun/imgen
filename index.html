@@ -9,6 +9,13 @@
 
   <body class="app-layout">
     <div>
+      <button id="cam-toggle">Start camera</button>
+      <span id="cam-task-count"></div>
+      <pre><code id="cam-description"></code></pre>
+      <pre><code id="cam-description"></code></pre>
+    </div>
+
+    <div>
       <select id="model" name="model">
         <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
         <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
@@ -17,9 +24,9 @@
       <button id="talk">Use microphone</button>
       <span id="message-output"></span>
     </div>
-    <pre><code id="xml-preview"></code></pre>
-    <div id="image-prompt"></div>
     <img id="image-output" />
+    <div id="image-prompt"></div>
+    <pre><code id="xml-preview"></code></pre>
 
     <ai-bar auto-hide>
       <!-- <stt-node></stt-node> -->
@@ -27,14 +34,13 @@
       <llm-node></llm-node>
       <azure-tts-node></azure-tts-node>
       <azure-dalle-node></azure-dalle-node>
-      <camera-node video="debug-video" canvas="debug-canvas"></camera-node>
       <together-ai-node></together-ai-node>
       <openai-realtime-node></openai-realtime-node>
       <eleven-labs-tts-node></eleven-labs-tts-node>
       <drag-handle></drag-handle>
       <hide-bar></hide-bar>
       <azure-connection></azure-connection>
-      <walkie-talkie-button></walkie-talkie-button>
+      <camera-node video="debug-video" canvas="debug-canvas"></camera-node>
     </ai-bar>
     <script src="/src/main.ts" type="module"></script>
   </body>

@@ -1,4 +1,8 @@
+import Pixelmatch from "pixelmatch";
 import { debounceTime, Subject, Subscription, tap } from "rxjs";
+import { $new } from "../../../dom";
+import { attachShadowHtml } from "../wc-utils/attach-html";
+import { WindowedMovingAverage } from "./lib/moving-average";
 
 export function defineCameraNode() {
   customElements.define("camera-node", CameraNode);
@@ -9,18 +13,68 @@ export class CameraNode extends HTMLElement {
   private canvasElement: HTMLCanvasElement;
   private canvasContext: CanvasRenderingContext2D;
   private referenceFrame: ImageData | null = null;
-  private colorDistanceThreshold: number = 30;
-  private changeThreshold: number = 0.02;
+  private captureTriggerRatio: number = 0.01; // ratio of changed pixels to trigger a capture
+  private pixelTriggerRadio: number = 0.04; // sensitivity for detecting pixel level change
   private dynamicScanDebounce = 200;
-
   private stream: MediaStream | null = null;
-
   private diffStream$ = new Subject<number>();
   private diffStreamSub: Subscription | null = null;
 
+  shadowRoot = attachShadowHtml(
+    this,
+    `
+<style>
+:host {
+  select {
+      display: block;
+      font-size: 16px;
+  }
+
+  button {
+    font-size: 16px;
+  }
+
+  form {
+    display: grid;
+    gap: 1rem;
+
+    meter {
+      width: 100%;
+    }
+  }
+}
+</style>
+<button>📹</button>
+<dialog style="width: min(60rem, calc(100vw - 32px))">
+  <form  method="dialog">
+    <label for="webcam">Select Webcam</label>
+    <select name="webcam" id="webcamSelect">
+        <option value="" disabled selected>Select a webcam</option>
+    </select>
+    <label for="pixelTriggerRadio">Pixel Trigger Ratio <span data-value="pixelTriggerRadio"></span></label>
+    <input type="range" id="pixelTriggerRadio" name="pixelTriggerRadio" min="0" max="1" step="0.01" value="0.2">
+    <label for="captureTriggerRatio">Capture Trigger Ratio <span data-value="capturueTriggerRatio"></span></label>
+    <input type="range" id="captureTriggerRatio" name="captureTriggerRatio" min="0" max="1" step="0.001" value="0.02">
+    <label for="capture-meter">Capture meter <span id="radio-display"></span></label>
+    <meter id="capture-meter" min="0" max="1" low="0.02" value="0.01"></meter>
+    <canvas id="diff-preview"></canvas>
+    <div id="capture-list"></div>
+    <button>OK</button>
+  </form>
+</dialog>
+    `.trim(),
+  );
+
+  private diffPreviewCanvas = this.shadowRoot!.getElementById("diff-preview") as HTMLCanvasElement;
+  private radioDisplay = this.shadowRoot!.getElementById("radio-display") as HTMLDivElement;
+  private captureMeter = this.shadowRoot!.getElementById("capture-meter") as HTMLMeterElement;
+  private captureList = this.shadowRoot!.getElementById("capture-list")!;
+  private diffPreviewContext: CanvasRenderingContext2D | null = null;
+  // private movingDiffAverage = new ExponentialMovingAverage(0.1);
+  private movingDiffAverage = new WindowedMovingAverage(10);
+
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
 
     // Create video and canvas elements
     const externalVideo = this.getAttribute("video")
@@ -40,10 +94,27 @@ export class CameraNode extends HTMLElement {
       : null;
     this.canvasElement = externalCanvas ?? document.createElement("canvas");
     this.canvasContext = this.canvasElement.getContext("2d")!;
+    this.canvasElement.style.display = "none";
 
     if (!externalCanvas) {
       this.shadowRoot!.append(this.canvasElement);
     }
+  }
+
+  connectedCallback() {
+    this.setAttribute("provides", "toolbar-item");
+    this.shadowRoot.querySelector("button")?.addEventListener("click", () => {
+      this.diffPreviewContext = this.diffPreviewCanvas.getContext("2d")!;
+      this.shadowRoot.querySelector("dialog")?.showModal();
+      this.start();
+    });
+    this.initSetupForm();
+
+    // handle model close
+    this.shadowRoot.querySelector("dialog")?.addEventListener("close", () => {
+      this.diffPreviewContext = null;
+      this.stop();
+    });
   }
 
   async getDeviceList(): Promise<MediaDeviceInfo[]> {
@@ -56,11 +127,12 @@ export class CameraNode extends HTMLElement {
     }
   }
 
-  async start(deviceId?: string): Promise<void> {
+  async start(): Promise<void> {
     try {
-      const constraints = {
+      const selectedId = localStorage.getItem("selectedWebcamDeviceId") ?? "";
+      const constraints: MediaStreamConstraints = {
         video: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
+          deviceId: { ideal: selectedId },
           width: { min: 200, ideal: 400 },
           height: { min: 200, ideal: 400 },
         },
@@ -75,6 +147,12 @@ export class CameraNode extends HTMLElement {
         tap((diffPercentage) => {
           this.dispatchEvent(new Event("framechange"));
           console.log("framechange", { diffPercentage });
+          if (this.diffPreviewContext) {
+            const debugCapture = this.capture();
+
+            const img = $new("img", { src: debugCapture, width: "64", height: "64" });
+            this.captureList.append(img);
+          }
         }),
       );
 
@@ -100,23 +178,43 @@ export class CameraNode extends HTMLElement {
     return "";
   }
 
-  updateSettings(colorDistanceThreshold: number, changeThreshold: number): void {
-    this.colorDistanceThreshold = colorDistanceThreshold;
-    this.changeThreshold = changeThreshold;
-  }
-
   private processFrame(): void {
     if (!this.videoElement.paused && !this.videoElement.ended) {
       this.canvasElement.width = this.videoElement.videoWidth;
       this.canvasElement.height = this.videoElement.videoHeight;
       this.canvasContext.drawImage(this.videoElement, 0, 0, this.canvasElement.width, this.canvasElement.height);
       const currentFrame = this.canvasContext.getImageData(0, 0, this.canvasElement.width, this.canvasElement.height);
+      if (this.diffPreviewContext) {
+        this.diffPreviewCanvas.width = this.canvasElement.width;
+        this.diffPreviewCanvas.height = this.canvasElement.height;
+      }
+      const diffBuffer = this.diffPreviewContext
+        ? this.diffPreviewContext.createImageData(this.canvasElement.width, this.canvasElement.height)
+        : null;
 
       if (this.referenceFrame) {
-        const diffPercentage = this.compareFrames(this.referenceFrame, currentFrame);
-        if (diffPercentage > this.changeThreshold) {
-          this.referenceFrame = currentFrame;
-          this.diffStream$.next(diffPercentage);
+        const pixelmatchOutput = Pixelmatch(
+          this.referenceFrame.data,
+          currentFrame.data,
+          diffBuffer?.data ?? null,
+          this.referenceFrame.width,
+          this.referenceFrame.height,
+          { threshold: this.pixelTriggerRadio, includeAA: true },
+        );
+
+        // visualize diff when debugging
+        if (this.diffPreviewContext && diffBuffer) this.diffPreviewContext.putImageData(diffBuffer, 0, 0);
+
+        const totalPixel = this.referenceFrame.width * this.referenceFrame.height;
+        const diffPercentageV2 = pixelmatchOutput / totalPixel;
+        const avgDiff = this.movingDiffAverage.add(diffPercentageV2);
+
+        this.radioDisplay.textContent = (100 * avgDiff).toFixed(2).padStart(5, "0") + "%";
+        this.captureMeter.value = avgDiff;
+
+        this.referenceFrame = currentFrame;
+        if (avgDiff > this.captureTriggerRatio) {
+          this.diffStream$.next(avgDiff);
         }
       } else {
         this.referenceFrame = currentFrame;
@@ -126,26 +224,82 @@ export class CameraNode extends HTMLElement {
     }
   }
 
-  private compareFrames(frame1: ImageData, frame2: ImageData): number {
-    const data1 = frame1.data;
-    const data2 = frame2.data;
-    let differentPixels = 0;
+  private async initSetupForm(): Promise<void> {
+    const webcamSelect = this.shadowRoot!.getElementById("webcamSelect") as HTMLSelectElement;
 
-    for (let i = 0; i < data1.length; i += 4) {
-      const r1 = data1[i],
-        g1 = data1[i + 1],
-        b1 = data1[i + 2];
-      const r2 = data2[i],
-        g2 = data2[i + 1],
-        b2 = data2[i + 2];
+    const saveSelectedDevice = () => {
+      if (webcamSelect) {
+        const selectedDeviceId = webcamSelect.value;
 
-      const colorDistance = Math.sqrt((r2 - r1) ** 2 + (g2 - g1) ** 2 + (b2 - b1) ** 2);
+        if (selectedDeviceId) {
+          // Save the selected device ID in local storage
+          localStorage.setItem("selectedWebcamDeviceId", selectedDeviceId);
+          console.log("Webcam device ID saved:", selectedDeviceId);
 
-      if (colorDistance > this.colorDistanceThreshold) {
-        differentPixels++;
+          this.stop();
+          this.start();
+        }
       }
-    }
+    };
 
-    return differentPixels / (data1.length / 4);
+    try {
+      // Request access to media devices
+      await navigator.mediaDevices.getUserMedia({ video: true });
+
+      const videoDevices = await this.getDeviceList();
+
+      if (webcamSelect) {
+        videoDevices.forEach((device, index) => {
+          const option = document.createElement("option");
+          option.value = device.deviceId;
+          option.textContent = device.label || `Camera ${index + 1}`;
+          webcamSelect.appendChild(option);
+        });
+
+        webcamSelect.addEventListener("change", saveSelectedDevice);
+
+        const previousSelected = localStorage.getItem("selectedWebcamDeviceId");
+        if (previousSelected && videoDevices.some((device) => device.deviceId === previousSelected)) {
+          webcamSelect.value = previousSelected;
+        }
+
+        const form = this.shadowRoot!.querySelector("form");
+        const captureTriggerRatioInput = this.shadowRoot!.getElementById("captureTriggerRatio") as HTMLInputElement;
+        const captureTriggerTextOutput = this.shadowRoot!.querySelector("[data-value=capturueTriggerRatio]");
+        const pixelTriggerRadioInput = this.shadowRoot!.getElementById("pixelTriggerRadio") as HTMLInputElement;
+        const pixelTriggerTextOutput = this.shadowRoot!.querySelector("[data-value=pixelTriggerRadio]");
+
+        const previousCaptureTrigger = localStorage.getItem("captureTriggerRatio");
+        const previousPixelTrigger = localStorage.getItem("pixelTriggerRadio");
+
+        if (previousCaptureTrigger) {
+          captureTriggerRatioInput.value = previousCaptureTrigger;
+          this.captureTriggerRatio = parseFloat(previousCaptureTrigger);
+          captureTriggerTextOutput!.textContent = (100 * this.captureTriggerRatio).toFixed(2) + "%";
+          this.captureMeter.low = this.captureTriggerRatio;
+        }
+
+        if (previousPixelTrigger) {
+          pixelTriggerRadioInput.value = previousPixelTrigger;
+          this.pixelTriggerRadio = parseFloat(previousPixelTrigger);
+          pixelTriggerTextOutput!.textContent = (100 * this.pixelTriggerRadio).toFixed(2) + "%";
+        }
+
+        // add formChangeEvent
+        form?.addEventListener("input", () => {
+          this.captureTriggerRatio = captureTriggerRatioInput.valueAsNumber;
+          captureTriggerTextOutput!.textContent = (100 * this.captureTriggerRatio).toFixed(2) + "%";
+          this.captureMeter.low = this.captureTriggerRatio;
+
+          this.pixelTriggerRadio = pixelTriggerRadioInput.valueAsNumber;
+          pixelTriggerTextOutput!.textContent = (100 * this.pixelTriggerRadio).toFixed(2) + "%";
+
+          localStorage.setItem("captureTriggerRatio", this.captureTriggerRatio.toString());
+          localStorage.setItem("pixelTriggerRadio", this.pixelTriggerRadio.toString());
+        });
+      }
+    } catch (error) {
+      console.error("Error accessing media devices.", error);
+    }
   }
 }
