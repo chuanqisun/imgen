@@ -73,6 +73,13 @@
       <img id="discussion-output" />
     </fieldset>
 
+    <fieldset>
+      <legend>Story</legend>
+      <input id="story-prompt" type="text" placeholder="attention" />
+      <button data-action="talk" data-talk="story-prompt">Talk</button>
+      <button id="Story">Create</button>
+    </fieldset>
+
     <ai-bar auto-hide>
       <azure-stt-node></azure-stt-node>
       <llm-node></llm-node>
