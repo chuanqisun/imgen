@@ -9,12 +9,10 @@
 
   <body class="app-layout">
     <h2>Input</h2>
-    <button id="realtime-push-to-talk">Push to talk</button>
     <fieldset>
       <legend>Show</legend>
       <input id="camera-prompt" type="text" placeholder="goal" />
       <button data-action="talk" data-talk="camera-prompt">Talk</button>
-      <span id="message-output"></span>
     </fieldset>
 
     <fieldset>
@@ -22,11 +20,12 @@
       <input id="interview-prompt" type="text" placeholder="goal" />
       <button data-action="talk" data-talk="interview-prompt">Talk</button>
       <button data-action="start-interview">Start</button>
-      <span id="message-output"></span>
+      <button id="realtime-push-to-talk">Push to talk</button>
+      <label><input type="checkbox" id="always-on" /> Always on</label>
     </fieldset>
 
     <fieldset>
-      <legend>Describe</legend>
+      <legend>Dictate</legend>
       <input id="prompt" type="text" />
       <button id="talk">Use microphone</button>
       <span id="message-output"></span>

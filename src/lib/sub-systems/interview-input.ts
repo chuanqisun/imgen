@@ -10,8 +10,20 @@ export function useInterviewInput(options: { currentWorldXML: BehaviorSubject<st
   const realtimeNode = $<OpenAIRealtimeNode>("openai-realtime-node")!;
   const toggleInterviewButton = $<HTMLButtonElement>(`[data-action="start-interview"]`)!;
   const realtimePushToTalk = $<HTMLButtonElement>("#realtime-push-to-talk")!;
+  const alwaysOnCheckbox = $<HTMLInputElement>("#always-on")!;
 
   let interviewInstructionSub: Subscription | null = null;
+
+  const alwaysOn$ = fromEvent(alwaysOnCheckbox, "change").pipe(
+    map((e) => (e.target as HTMLInputElement).checked),
+    tap((checked) => {
+      if (checked) {
+        realtimeNode.unmuteMicrophone();
+      } else {
+        realtimeNode.muteMicrophone();
+      }
+    }),
+  );
 
   const instructionUpdate$ = options.currentWorldXML.pipe(
     tap((xml) => {
@@ -43,6 +55,7 @@ ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.valu
     map(parseActionEvent),
     tap(async (e) => {
       if (e.action === "start-interview") {
+        alwaysOnCheckbox.checked = false;
         await realtimeNode.start();
         realtimeNode.muteMicrophone();
         interviewInstructionSub = instructionUpdate$.subscribe();
@@ -98,5 +111,5 @@ ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.valu
     ),
   );
 
-  return merge(interviewControl$, interviewPushToTalk$);
+  return merge(interviewControl$, interviewPushToTalk$, alwaysOn$);
 }
