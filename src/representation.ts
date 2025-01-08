@@ -31,6 +31,42 @@ const renderXML$ = currentWorldXML.pipe(tap((xml) => (xmlPreview.textContent = x
 
 const forget$ = fromEvent(forgetButton, "click").pipe(tap(() => currentWorldXML.next("<world></world>")));
 
+// delegated push to talk
+let sttTargetElement: HTMLInputElement | null = null;
+
+const delegatedPushToTalk$ = merge(
+  fromEvent(document, "mousedown").pipe(
+    map(parseActionEvent),
+    filter((e) => e.action === "talk"),
+    tap((e) => {
+      (e.trigger as HTMLButtonElement).textContent = "Send";
+      azureSttNode.start();
+      sttTargetElement = $<HTMLInputElement>(`#${(e.trigger as HTMLElement).getAttribute("data-talk") ?? ""}`) ?? null;
+    }),
+  ),
+  fromEvent(document, "mouseup").pipe(
+    map(parseActionEvent),
+    filter((e) => e.action === "talk"),
+    tap((e) => {
+      (e.trigger as HTMLButtonElement).textContent = "Talk";
+      azureSttNode.stop();
+    }),
+  ),
+);
+
+const delegatedRecognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "event").pipe(
+  tap(preventDefault),
+  tap(stopPropagation),
+  map((e) => (e as CustomEvent<AIBarEventDetail>).detail.recognized?.text as string),
+  filter((v) => !!v?.length),
+  tap((text) => {
+    if (!sttTargetElement) return;
+    sttTargetElement.value = text;
+  }),
+);
+
+merge(delegatedPushToTalk$, delegatedRecognition$).subscribe();
+
 talkButton.addEventListener(
   "mousedown",
   (e) => {
@@ -260,5 +296,5 @@ globalClick$.subscribe();
 generateImage$.subscribe();
 holdToTalk$.subscribe();
 renderXML$.subscribe();
-updateWorldModel$.subscribe();
+// updateWorldModel$.subscribe();
 forget$.subscribe();
