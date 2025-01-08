@@ -61,6 +61,7 @@ const delegatedRecognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttN
   filter((v) => !!v?.length),
   tap((text) => {
     if (!sttTargetElement) return;
+    if (sttTargetElement.value) text = sttTargetElement.value + " " + text;
     sttTargetElement.value = text;
   }),
 );
