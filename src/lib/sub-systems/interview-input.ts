@@ -33,7 +33,7 @@ Everytime after user speaks, before you respond, you must update the XML with on
 Requirements:
 ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.value}` : "The world model should be detailed and hierarchical."}
 - Before you respond, add the new information to the world model to reflect on what you have learned about the user.
-- Do NOT remove/overwrite the information you have gathered. Only add to the model.
+- Do NOT remove/overwrite the information you have gathered unless user makes a correction. Only add to the model.
 - You interview style is very concise. Let the user do the talking.
       `);
     }),
