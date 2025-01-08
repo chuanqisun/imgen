@@ -40,6 +40,7 @@ const realtimeNode = $<OpenAIRealtimeNode>("openai-realtime-node")!;
 const toggleInterviewButton = $<HTMLButtonElement>(`[data-action="start-interview"]`)!;
 const interviewPrompt = $<HTMLInputElement>("#interview-prompt")!;
 const modelPrompt = $<HTMLInputElement>("#model-prompt")!;
+const realtimePushToTalk = $<HTMLButtonElement>("#realtime-push-to-talk")!;
 
 const EMPTY_XML = "<world></world>";
 const currentWorldXML = new BehaviorSubject(EMPTY_XML);
@@ -95,30 +96,31 @@ Conduct an interview to model the user. The interview should be focused on the f
 ${interviewPrompt.value}
 ${
   xml === EMPTY_XML
-    ? `\nThe starting state of the model is. Get started by modeling the <user>:
-<world></world>`
+    ? `\nThe starting state of the model is <world></world>. Get started by modeling the <user>`
     : `\nHere is what you have gathered so far:
 ${xml}\n`
 }
 
-Everytime after user speaks, before you respond, you must update the world model XML with tools:
-  - Use the update_by_script tool to programmatically update the model
-  - Use rewrite_xml tool to perform large updates
+Everytime after user speaks, before you respond, you must update the XML with one of the tools:
+  - Use the update_by_script tool to programmatically add information to the model with DOM API. Global variable \`world\` represents the <world> node.
+  - each update_by_script has its own executation environment. You can re-query nodes with document.querySelector/querySelectorAll each time.
+  - Use rewrite_xml tool to perform large updates. The new XML should have <world>...</world> as the top level tag.
 
 Requirements:
 ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.value}` : "The world model should be detailed and hierarchical."}
 - Before you respond, add the new information to the world model to reflect on what you have learned about the user.
-- Do NOT lose the information you have gathered. Keep adding to the model.
-- Keep the interview going and keep taking notes after each user utterance until the user decides to stop the interview.
-- You interview style is very concise. Let the user do the most talking.
+- Do NOT remove/overwrite the information you have gathered. Only add to the model.
+- You interview style is very concise. Let the user do the talking.
       `);
   }),
 );
+
 const interviewControl$ = fromEvent(toggleInterviewButton, "click").pipe(
   map(parseActionEvent),
   tap(async (e) => {
     if (e.action === "start-interview") {
       await realtimeNode.start();
+      realtimeNode.muteMicrophone();
       interviewInstructionSub = instructionUpdate$.subscribe();
 
       realtimeNode
@@ -129,7 +131,7 @@ const interviewControl$ = fromEvent(toggleInterviewButton, "click").pipe(
             script: z
               .string()
               .describe(
-                "A DOM manipulation javascript that creates or updates the nodes and their content.`document` is the root of the world model.",
+                "A DOM manipulation javascript that creates or updates the nodes and their content. global variable `world` is the root node of the world model.",
               ),
           }),
           run: update_by_script.bind(null, currentWorldXML),
@@ -157,6 +159,22 @@ const interviewControl$ = fromEvent(toggleInterviewButton, "click").pipe(
   }),
 );
 
+const interviewPushToTalk$ = merge(
+  fromEvent(realtimePushToTalk, "mousedown").pipe(
+    tap(() => {
+      realtimeNode.unmuteMicrophone();
+      realtimeNode.textContent = "Release to send";
+    }),
+  ),
+  fromEvent(realtimePushToTalk, "mouseup").pipe(
+    tap(() => {
+      realtimeNode.muteMicrophone();
+      realtimeNode.textContent = "Hold to talk";
+    }),
+  ),
+);
+
+interviewPushToTalk$.subscribe();
 interviewControl$.subscribe();
 
 talkButton.addEventListener(
@@ -207,11 +225,11 @@ const voiceSubmit$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "eve
 
 function update_by_script(scene$: BehaviorSubject<string>, args: { script: string }) {
   console.log(`[tool] script`, args.script);
-  const fn = new Function("document", args.script);
+  const fn = new Function("document", "world", args.script);
   try {
     const existingXml = scene$.value;
     const doc = new DOMParser().parseFromString(scene$.value, "application/xml");
-    fn(doc);
+    fn(doc, doc.querySelector("world")!);
     const xml = new XMLSerializer().serializeToString(doc);
     console.log(`[scene] updated`, { existingXml, newXml: xml });
     scene$.next(xml);
