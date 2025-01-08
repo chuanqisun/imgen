@@ -7,6 +7,7 @@ import { loadAIBar } from "./lib/ai-bar/loader";
 import { $, parseActionEvent, preventDefault, stopPropagation } from "./lib/dom";
 
 import type { AzureSttNode } from "./lib/ai-bar/lib/elements/azure-stt-node";
+import { OpenAIRealtimeNode } from "./lib/ai-bar/lib/elements/openai-realtime-node";
 import "./main.css";
 
 loadAIBar();
@@ -22,6 +23,8 @@ const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
 const talkButton = $<HTMLButtonElement>("#talk")!;
 const renderButton = $<HTMLButtonElement>("#render")!;
 const forgetButton = $<HTMLButtonElement>("#forget")!;
+const realtimeNode = $<OpenAIRealtimeNode>("openai-realtime-node")!;
+const toggleInterviewButton = $<HTMLButtonElement>(`[data-action="start-interview"]`)!;
 
 const currentWorldXML = new BehaviorSubject("<world></world>");
 
@@ -67,6 +70,23 @@ const delegatedRecognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttN
 );
 
 merge(delegatedPushToTalk$, delegatedRecognition$).subscribe();
+
+const interviewControl$ = fromEvent(toggleInterviewButton, "click").pipe(
+  map(parseActionEvent),
+  tap((e) => {
+    if (e.action === "start-interview") {
+      realtimeNode.start();
+      toggleInterviewButton.textContent = "Stop";
+      toggleInterviewButton.setAttribute("data-action", "stop-interview");
+    } else {
+      realtimeNode.stop();
+      toggleInterviewButton.textContent = "Start";
+      toggleInterviewButton.setAttribute("data-action", "start-interview");
+    }
+  }),
+);
+
+interviewControl$.subscribe();
 
 talkButton.addEventListener(
   "mousedown",
