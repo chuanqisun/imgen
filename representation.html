@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storybox</title>
+  </head>
+
+  <body class="app-layout">
+    <div>
+      <button id="cam-toggle">Start camera</button>
+      <button id="cam-capture">Capture</button>
+      <span id="cam-task-count"></div>
+      <pre><code id="cam-description"></code></pre>
+      <pre><code id="cam-description"></code></pre>
+      <video id="monitor"></video>
+    </div>
+
+    <div>
+      <select id="model" name="model">
+        <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
+        <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
+      </select>
+      <input id="prompt" type="text" />
+      <button id="talk">Use microphone</button>
+      <span id="message-output"></span>
+    </div>
+    <img id="image-output" />
+    <div id="image-prompt"></div>
+    <pre><code id="xml-preview"></code></pre>
+
+    <ai-bar auto-hide>
+      <!-- <stt-node></stt-node> -->
+      <azure-stt-node></azure-stt-node>
+      <llm-node></llm-node>
+      <azure-tts-node></azure-tts-node>
+      <azure-dalle-node></azure-dalle-node>
+      <together-ai-node></together-ai-node>
+      <openai-realtime-node></openai-realtime-node>
+      <eleven-labs-tts-node></eleven-labs-tts-node>
+      <drag-handle></drag-handle>
+      <hide-bar></hide-bar>
+      <azure-connection></azure-connection>
+      <camera-node video="monitor"></camera-node>
+      <microphone-node></microphone-node>
+    </ai-bar>
+    <script src="/src/main.ts" type="module"></script>
+  </body>
+</html>

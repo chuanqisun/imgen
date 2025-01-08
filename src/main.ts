@@ -38,6 +38,7 @@ const talkButton = $<HTMLButtonElement>("#talk")!;
 const camToggle = $<HTMLButtonElement>("#cam-toggle")!;
 const camDescription = $<HTMLDivElement>("#cam-description")!;
 const camTaskCountDisplay = $<HTMLDivElement>("#cam-task-count")!;
+const camCaptureButton = $<HTMLButtonElement>("#cam-capture")!;
 
 let submissionQueue: string[] = [];
 
@@ -139,7 +140,7 @@ const camTaskCountDisplay$ = camTaskCount.pipe(
   }),
 );
 
-const frameChanges$ = fromEvent(cameraNode, "framechange").pipe(
+const camCap$ = fromEvent(camCaptureButton, "click").pipe(
   map(() => cameraNode.capture()),
   mergeMap(async (image) => {
     const startedAt = Date.now();
@@ -199,7 +200,7 @@ const frameChanges$ = fromEvent(cameraNode, "framechange").pipe(
   }),
 );
 
-const mergeImage$ = frameChanges$.pipe(
+const mergeImage$ = camCap$.pipe(
   switchMap((newFrame) => {
     const aoai = llmNode.getClient("aoai");
     const abortController = new AbortController();
@@ -449,6 +450,5 @@ holdToTalk$.subscribe();
 renderXML$.subscribe();
 
 camTaskCountDisplay$.subscribe();
-frameChanges$.subscribe();
 camToggle$.subscribe();
 mergeImage$.subscribe();

@@ -1,4 +1,4 @@
-import Pixelmatch from "pixelmatch";
+import type Pixelmatch from "pixelmatch";
 import { debounceTime, Subject, Subscription, tap } from "rxjs";
 import { $new } from "../../../dom";
 import { attachShadowHtml } from "../wc-utils/attach-html";
@@ -19,6 +19,7 @@ export class CameraNode extends HTMLElement {
   private stream: MediaStream | null = null;
   private diffStream$ = new Subject<number>();
   private diffStreamSub: Subscription | null = null;
+  private pm: typeof Pixelmatch | null = null;
 
   shadowRoot = attachShadowHtml(
     this,
@@ -106,7 +107,7 @@ export class CameraNode extends HTMLElement {
     this.shadowRoot.querySelector("button")?.addEventListener("click", () => {
       this.diffPreviewContext = this.diffPreviewCanvas.getContext("2d")!;
       this.shadowRoot.querySelector("dialog")?.showModal();
-      this.start();
+      this.start({ detectChanges: true });
     });
     this.initSetupForm();
 
@@ -127,7 +128,7 @@ export class CameraNode extends HTMLElement {
     }
   }
 
-  async start(): Promise<void> {
+  async start(options?: { detectChanges?: boolean }): Promise<void> {
     try {
       const selectedId = localStorage.getItem("selectedWebcamDeviceId") ?? "";
       const constraints: MediaStreamConstraints = {
@@ -140,7 +141,10 @@ export class CameraNode extends HTMLElement {
       this.stream = await navigator.mediaDevices.getUserMedia(constraints);
       this.videoElement.srcObject = this.stream;
 
-      this.videoElement.addEventListener("play", this.processFrame.bind(this));
+      if (options?.detectChanges || this.hasAttribute("detect-change")) {
+        this.pm = (await import("pixelmatch")).default;
+        this.videoElement.addEventListener("play", this.processFrame.bind(this));
+      }
 
       const debouncedScan = this.diffStream$.pipe(
         debounceTime(this.dynamicScanDebounce),
@@ -193,7 +197,7 @@ export class CameraNode extends HTMLElement {
         : null;
 
       if (this.referenceFrame) {
-        const pixelmatchOutput = Pixelmatch(
+        const pixelmatchOutput = this.pm!(
           this.referenceFrame.data,
           currentFrame.data,
           diffBuffer?.data ?? null,
