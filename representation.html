@@ -8,37 +8,62 @@
   </head>
 
   <body class="app-layout">
+    <h2>Input</h2>
     <fieldset>
-      <legend>Perception</legend>
+      <legend>Show</legend>
+      <input id="interview-goal" type="text" placeholder="goal" />
+      <button data-action="talk" data-talk="interview-goal">Talk</button>
+      <span id="message-output"></span>
+    </fieldset>
+
+    <fieldset>
+      <legend>Interview</legend>
+      <input id="interview-goal" type="text" placeholder="goal" />
+      <button data-action="talk" data-talk="interview-goal">Talk</button>
+      <span id="message-output"></span>
+    </fieldset>
+
+    <fieldset>
+      <legend>Describe</legend>
       <input id="prompt" type="text" />
       <button id="talk">Use microphone</button>
       <span id="message-output"></span>
     </fieldset>
 
+    <h2>Memory</h2>
     <fieldset>
       <legend>World model</legend>
+      <input id="attention" placeholder="attention" type="text" />
+      <button data-action="talk" data-talk="attention">Talk</button>
       <button id="forget">Forget</button>
       <pre><code id="xml-preview"></code></pre>
     </fieldset>
 
+    <h2>Output</h2>
     <fieldset>
-      <legend>Text</legend>
+      <legend>Write</legend>
+      <input id="writing-prompt" type="text" placeholder="attention" />
+      <button data-action="talk" data-talk="writing-prompt">Talk</button>
       <button id="write">Write</button>
     </fieldset>
 
     <fieldset>
-      <legend>Visual</legend>
+      <legend>Paint</legend>
       <select id="model" name="model">
         <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
         <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
       </select>
+      <input id="visual-prompt" type="text" placeholder="attention" />
+      <button data-action="talk" data-talk="visual-prompt">Talk</button>
       <button id="render">Render</button>
       <div id="image-prompt"></div>
       <img id="image-output" />
     </fieldset>
 
     <fieldset>
-      <legend>Dialogue</legend>
+      <legend>Discuss</legend>
+      <input id="dialogue-prompt" type="text" placeholder="attention" />
+      <button data-action="talk" data-talk="dialogue-prompt">Talk</button>
       <button id="discuss">Discuss</button>
       <div id="discussion-prompt"></div>
       <img id="discussion-output" />
