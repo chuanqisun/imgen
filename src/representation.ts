@@ -41,6 +41,9 @@ const toggleInterviewButton = $<HTMLButtonElement>(`[data-action="start-intervie
 const interviewPrompt = $<HTMLInputElement>("#interview-prompt")!;
 const modelPrompt = $<HTMLInputElement>("#model-prompt")!;
 const realtimePushToTalk = $<HTMLButtonElement>("#realtime-push-to-talk")!;
+const writeButton = $<HTMLButtonElement>("#write")!;
+const writingPrompt = $<HTMLInputElement>("#writing-prompt")!;
+const writingPreview = $<HTMLElement>("#writing-preview")!;
 
 const EMPTY_XML = "<world></world>";
 const currentWorldXML = new BehaviorSubject(EMPTY_XML);
@@ -88,6 +91,7 @@ const delegatedRecognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttN
 
 merge(delegatedPushToTalk$, delegatedRecognition$).subscribe();
 
+// INTERVIEW SUB-SYSTEM
 let interviewInstructionSub: Subscription | null = null;
 const instructionUpdate$ = currentWorldXML.pipe(
   tap((xml) => {
@@ -177,6 +181,51 @@ const interviewPushToTalk$ = merge(
 interviewPushToTalk$.subscribe();
 interviewControl$.subscribe();
 
+// WRITING SUB-SYSTEM
+const write$ = fromEvent(writeButton, "click").pipe(
+  switchMap(() => {
+    // clear the output first
+    writingPreview.textContent = "";
+
+    const llm = llmNode.getClient("aoai");
+    const abortController = new AbortController();
+    return new Observable<string>((subscriber) => {
+      llm.chat.completions
+        .create(
+          {
+            stream: true,
+            messages: [
+              system`
+You are a talented writer. Here is the world knowledge you have:
+${currentWorldXML.value}
+
+Based on user's writing prompt, produce the writing based on the world knowledge. Respond in markdown format.
+              `,
+              user`${writingPrompt.value}`,
+            ],
+            model: "gpt-4o",
+          },
+          {
+            signal: abortController.signal,
+          },
+        )
+        .then(async (res) => {
+          for await (const chunk of res) {
+            const text = chunk?.choices[0]?.delta.content ?? "";
+            if (text) subscriber.next(text);
+          }
+        });
+
+      return () => abortController.abort();
+    }).pipe(
+      tap((text) => {
+        writingPreview.textContent += text;
+      }),
+    );
+  }),
+);
+write$.subscribe();
+
 talkButton.addEventListener(
   "mousedown",
   (e) => {
@@ -222,29 +271,6 @@ const voiceSubmit$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "eve
   map((e) => (e as CustomEvent<AIBarEventDetail>).detail.recognized?.text as string),
   filter((v) => !!v?.length),
 );
-
-function update_by_script(scene$: BehaviorSubject<string>, args: { script: string }) {
-  console.log(`[tool] script`, args.script);
-  const fn = new Function("document", "world", args.script);
-  try {
-    const existingXml = scene$.value;
-    const doc = new DOMParser().parseFromString(scene$.value, "application/xml");
-    fn(doc, doc.querySelector("world")!);
-    const xml = new XMLSerializer().serializeToString(doc);
-    console.log(`[scene] updated`, { existingXml, newXml: xml });
-    scene$.next(xml);
-    return `Done`;
-  } catch (e) {
-    return `Error: ${(e as any).message}`;
-  }
-}
-
-function rewrite_xml(scene$: BehaviorSubject<string>, args: { xml: string }) {
-  console.log(`[tool] rewrite`, args.xml);
-
-  scene$.next(args.xml);
-  return `Done`;
-}
 
 const updateByScript = update_by_script.bind(null, currentWorldXML);
 Object.defineProperty(updateByScript, "name", { value: "update_by_script" }); // protect from bundler mangling
@@ -401,6 +427,30 @@ Use exactly one tool. Do NOT say anything after tool use.
     });
   }),
 );
+
+// TOOLS
+function update_by_script(scene$: BehaviorSubject<string>, args: { script: string }) {
+  console.log(`[tool] script`, args.script);
+  const fn = new Function("document", "world", args.script);
+  try {
+    const existingXml = scene$.value;
+    const doc = new DOMParser().parseFromString(scene$.value, "application/xml");
+    fn(doc, doc.querySelector("world")!);
+    const xml = new XMLSerializer().serializeToString(doc);
+    console.log(`[scene] updated`, { existingXml, newXml: xml });
+    scene$.next(xml);
+    return `Done`;
+  } catch (e) {
+    return `Error: ${(e as any).message}`;
+  }
+}
+
+function rewrite_xml(scene$: BehaviorSubject<string>, args: { xml: string }) {
+  console.log(`[tool] rewrite`, args.xml);
+
+  scene$.next(args.xml);
+  return `Done`;
+}
 
 globalClick$.subscribe();
 generateImage$.subscribe();
