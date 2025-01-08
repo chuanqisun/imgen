@@ -1,4 +1,17 @@
-import { BehaviorSubject, filter, fromEvent, map, merge, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
+import {
+  BehaviorSubject,
+  filter,
+  fromEvent,
+  map,
+  merge,
+  Observable,
+  of,
+  Subscription,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from "rxjs";
+import z from "zod";
 import { type AIBarEventDetail } from "./lib/ai-bar/lib/ai-bar";
 import { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import type { TogetherAINode } from "./lib/ai-bar/lib/elements/together-ai-node";
@@ -25,14 +38,16 @@ const renderButton = $<HTMLButtonElement>("#render")!;
 const forgetButton = $<HTMLButtonElement>("#forget")!;
 const realtimeNode = $<OpenAIRealtimeNode>("openai-realtime-node")!;
 const toggleInterviewButton = $<HTMLButtonElement>(`[data-action="start-interview"]`)!;
+const interviewPrompt = $<HTMLInputElement>("#interview-prompt")!;
 
-const currentWorldXML = new BehaviorSubject("<world></world>");
+const EMPTY_XML = "<world></world>";
+const currentWorldXML = new BehaviorSubject(EMPTY_XML);
 
 let submissionQueue: string[] = [];
 
 const renderXML$ = currentWorldXML.pipe(tap((xml) => (xmlPreview.textContent = xml)));
 
-const forget$ = fromEvent(forgetButton, "click").pipe(tap(() => currentWorldXML.next("<world></world>")));
+const forget$ = fromEvent(forgetButton, "click").pipe(tap(() => currentWorldXML.next(EMPTY_XML)));
 
 // delegated push to talk
 let sttTargetElement: HTMLInputElement | null = null;
@@ -71,14 +86,63 @@ const delegatedRecognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttN
 
 merge(delegatedPushToTalk$, delegatedRecognition$).subscribe();
 
+let interviewInstructionSub: Subscription | null = null;
+const instructionUpdate$ = currentWorldXML.pipe(
+  tap((xml) => {
+    realtimeNode.updateSessionInstructions(`
+Conduct an interview to model the user. The interview should be focused on the following goal:
+${interviewPrompt.value}
+${
+  xml === EMPTY_XML
+    ? ""
+    : `\nHere is what you have gathered so far:
+${xml}\n`
+}
+
+Follow the this process:
+- **Each time** after user spoke, you must use the update_by_script tool and rewrite_xml tool to add the new information to the world model to reflect on what you have learned about the user.
+- Do NOT lose the information you already gathered.
+- Keep the interview going and keep taking notes after each user utterance until the user decides to stop the interview.
+- You interview style is very concise. Let the user do the most talking.
+      `);
+  }),
+);
 const interviewControl$ = fromEvent(toggleInterviewButton, "click").pipe(
   map(parseActionEvent),
-  tap((e) => {
+  tap(async (e) => {
     if (e.action === "start-interview") {
-      realtimeNode.start();
+      await realtimeNode.start();
+      interviewInstructionSub = instructionUpdate$.subscribe();
+
+      realtimeNode
+        .addDraftTool({
+          name: "update_by_script",
+          description: "Update the world model XML by executing a DOM manipulation javascript",
+          parameters: z.object({
+            script: z
+              .string()
+              .describe(
+                "A DOM manipulation javascript that creates or updates the nodes and their content.`document` is the root of the world model.",
+              ),
+          }),
+          run: update_by_script.bind(null, currentWorldXML),
+        })
+        .addDraftTool({
+          name: "rewrite_xml",
+          description: "Rewrite the entire world xml",
+          parameters: z.object({
+            xml: z.string().describe("The new scene xml, top level tag must be <world>...</world>"),
+          }),
+          run: rewrite_xml.bind(null, currentWorldXML),
+        })
+        .commitDraftTools();
+
+      realtimeNode.appendUserMessage(`Start the interview now by asking me for an intro`).createResponse();
+
       toggleInterviewButton.textContent = "Stop";
       toggleInterviewButton.setAttribute("data-action", "stop-interview");
     } else {
+      interviewInstructionSub?.unsubscribe();
       realtimeNode.stop();
       toggleInterviewButton.textContent = "Start";
       toggleInterviewButton.setAttribute("data-action", "start-interview");
@@ -165,7 +229,7 @@ Object.defineProperty(rewriteXml, "name", { value: "rewrite_xml" }); // protect 
 const imagePrompt$ = fromEvent(renderButton, "click").pipe(
   withLatestFrom(currentWorldXML),
   switchMap(([_, worldXML]) => {
-    if (worldXML === "<world></world>") return of("Empty");
+    if (worldXML === EMPTY_XML) return of("Empty");
 
     return new Observable<string>((subscriber) => {
       const llm = llmNode.getClient("aoai");
@@ -246,7 +310,7 @@ Syntax guideline
 - Spatial relationship must be explicitly described.
 
 Now update the scene XML based on user provided instructions. You must use one of the following tools:
-- update_by_script tool. You need to pass a DOM manipulate javascript to the tool. 
+- update_by_script tool. You need to pass a DOM manipulation javascript to the tool. 
 - rewrite_xml. You must rewrite the entire scene xml.
 
 Use exactly one tool. Do NOT say anything after tool use.
@@ -260,13 +324,13 @@ Use exactly one tool. Do NOT say anything after tool use.
               function: {
                 function: updateByScript,
                 parse: JSON.parse,
-                description: "Update the world model by executing a DOM manipulate javascript",
+                description: "Update the world model by executing a DOM manipulation javascript",
                 parameters: {
                   type: "object",
                   properties: {
                     script: {
                       type: "string",
-                      description: "A DOM manipulate javascript. `document` is the root of the world",
+                      description: "A DOM manipulation javascript. `document` is the root of the world",
                     },
                   },
                 },

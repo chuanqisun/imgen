@@ -18,7 +18,7 @@
     "prettier": "^3.4.2",
     "rxjs": "^7.8.1",
     "together-ai": "^0.10.0",
-    "zod": "^3.24.0"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/dom-speech-recognition": "^0.0.4",
