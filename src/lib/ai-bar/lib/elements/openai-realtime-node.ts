@@ -1,7 +1,9 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { AutoParseableResponseFormat } from "openai/lib/parser.mjs";
 import { z } from "zod";
+import { $ } from "../../../dom";
 import type { AIBar } from "../ai-bar";
+import type { MicrophoneNode } from "./microphone-node";
 
 export type Tool<T extends OpenAICompatibleSchema> = {
   name: string;
@@ -21,6 +23,14 @@ export interface ParsedTool extends Tool<any> {
 export function defineOpenAIRealtimeNode() {
   return customElements.define("openai-realtime-node", OpenAIRealtimeNode);
 }
+
+export const RealtimeEvents = {
+  userTranscriptCompleted: "conversation.item.input_audio_transcription.completed",
+  agentTranscriptDelta: "response.audio_transcript.delta",
+  agentTranscriptDone: "response.audio_transcript.done",
+};
+
+const microphoneNode = $<MicrophoneNode>("microphone-node");
 
 /**
  * OpenAI 4o Realtime Client
@@ -45,6 +55,7 @@ export class OpenAIRealtimeNode extends HTMLElement {
     // handle function calling
     dc.addEventListener("message", async (e) => {
       const data = JSON.parse(e.data);
+      // console.log(data);
 
       if (data.type === "response.done") {
         const responseOutput = data.response?.output?.at(0);
@@ -68,6 +79,20 @@ export class OpenAIRealtimeNode extends HTMLElement {
             }
           }
         }
+      }
+
+      if (data.type === RealtimeEvents.userTranscriptCompleted) {
+        this.dispatchEvent(
+          new CustomEvent<string>(RealtimeEvents.userTranscriptCompleted, { detail: data.transcript }),
+        );
+      }
+
+      if (data.type === RealtimeEvents.agentTranscriptDelta) {
+        this.dispatchEvent(new CustomEvent<string>(RealtimeEvents.agentTranscriptDelta, { detail: data.delta }));
+      }
+
+      if (data.type === RealtimeEvents.agentTranscriptDone) {
+        this.dispatchEvent(new CustomEvent<string>(RealtimeEvents.agentTranscriptDone, { detail: data.transcript }));
       }
     });
 
@@ -110,7 +135,7 @@ export class OpenAIRealtimeNode extends HTMLElement {
   }
 
   updateSessionInstructions(instructions: string) {
-    console.log(`[realtime] instruction changed`, instructions);
+    console.log(`[realtime] instruction changed`, { instructions });
     this.connection?.dc?.send(
       JSON.stringify({
         type: "session.update",
@@ -205,24 +230,24 @@ export class OpenAIRealtimeNode extends HTMLElement {
     // Get an ephemeral key from your server - see server code below
     const EPHEMERAL_KEY = await this.#getEphemeralKey();
 
-    // Create a peer connection
     const pc = new RTCPeerConnection();
 
-    // Set up to play remote audio from the model
     const audioEl = document.createElement("audio");
     audioEl.autoplay = true;
     pc.ontrack = (e) => (audioEl.srcObject = e.streams[0]);
 
     // Add local audio track for microphone input in the browser
     const ms = await navigator.mediaDevices.getUserMedia({
-      audio: true,
+      audio: {
+        deviceId: {
+          ideal: microphoneNode?.selectedDeviceId,
+        },
+      },
     });
     pc.addTrack(ms.getTracks()[0]);
 
-    // Set up data channel for sending and receiving events
     const dc = pc.createDataChannel("oai-events");
 
-    // Start the session using the Session Description Protocol (SDP)
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
@@ -275,7 +300,17 @@ export class OpenAIRealtimeNode extends HTMLElement {
     return data.client_secret.value as string;
   }
 
-  mute() {
+  interrupt() {
+    this.connection?.dc?.send(
+      JSON.stringify({
+        type: "response.cancel",
+      }),
+    );
+
+    return this;
+  }
+
+  muteMicrophone() {
     this.connection?.pc?.getSenders().forEach((sender) => {
       if (sender.track && sender.track.kind === "audio") {
         sender.track.enabled = false;
@@ -283,10 +318,26 @@ export class OpenAIRealtimeNode extends HTMLElement {
     });
   }
 
-  unmute() {
+  unmuteMicrophone() {
     this.connection?.pc?.getSenders().forEach((sender) => {
       if (sender.track && sender.track.kind === "audio") {
         sender.track.enabled = true;
+      }
+    });
+  }
+
+  muteSpeaker() {
+    this.connection?.pc?.getReceivers().forEach((receiver) => {
+      if (receiver.track && receiver.track.kind === "audio") {
+        receiver.track.enabled = false;
+      }
+    });
+  }
+
+  unmuteSpeaker() {
+    this.connection?.pc?.getReceivers().forEach((receiver) => {
+      if (receiver.track && receiver.track.kind === "audio") {
+        receiver.track.enabled = true;
       }
     });
   }
