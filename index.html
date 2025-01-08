@@ -10,9 +10,11 @@
   <body class="app-layout">
     <div>
       <button id="cam-toggle">Start camera</button>
+      <button id="cam-capture">Capture</button>
       <span id="cam-task-count"></div>
       <pre><code id="cam-description"></code></pre>
       <pre><code id="cam-description"></code></pre>
+      <video id="monitor"></video>
     </div>
 
     <div>
@@ -40,7 +42,7 @@
       <drag-handle></drag-handle>
       <hide-bar></hide-bar>
       <azure-connection></azure-connection>
-      <camera-node video="debug-video" canvas="debug-canvas"></camera-node>
+      <camera-node video="monitor"></camera-node>
       <microphone-node></microphone-node>
     </ai-bar>
     <script src="/src/main.ts" type="module"></script>
