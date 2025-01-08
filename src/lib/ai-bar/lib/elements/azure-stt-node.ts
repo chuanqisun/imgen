@@ -1,5 +1,9 @@
 import { Subject } from "rxjs";
+import { $ } from "../../../dom";
 import { AIBar, emit, type SpeechToTextProvider } from "../ai-bar";
+import { MicrophoneNode } from "./microphone-node";
+
+const microphoneNode = $<MicrophoneNode>("microphone-node");
 
 export class AzureSttNode extends HTMLElement implements SpeechToTextProvider {
   private isStarted = false;
@@ -22,7 +26,14 @@ export class AzureSttNode extends HTMLElement implements SpeechToTextProvider {
   }
 
   public async startMicrophone() {
-    const media = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (this.isMicrophoneStarted) return;
+    const media = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: {
+          ideal: microphoneNode?.selectedDeviceId,
+        },
+      },
+    });
     this.mediaRecorderAsync.resolve(new MediaRecorder(media));
     this.isMicrophoneStarted = true;
     console.log(`[azure-stt] microphone started`);
