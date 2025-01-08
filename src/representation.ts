@@ -39,6 +39,7 @@ const forgetButton = $<HTMLButtonElement>("#forget")!;
 const realtimeNode = $<OpenAIRealtimeNode>("openai-realtime-node")!;
 const toggleInterviewButton = $<HTMLButtonElement>(`[data-action="start-interview"]`)!;
 const interviewPrompt = $<HTMLInputElement>("#interview-prompt")!;
+const modelPrompt = $<HTMLInputElement>("#model-prompt")!;
 
 const EMPTY_XML = "<world></world>";
 const currentWorldXML = new BehaviorSubject(EMPTY_XML);
@@ -94,14 +95,20 @@ Conduct an interview to model the user. The interview should be focused on the f
 ${interviewPrompt.value}
 ${
   xml === EMPTY_XML
-    ? ""
+    ? `\nThe starting state of the model is. Get started by modeling the <user>:
+<world></world>`
     : `\nHere is what you have gathered so far:
 ${xml}\n`
 }
 
-Follow the this process:
-- **Each time** after user spoke, you must use the update_by_script tool and rewrite_xml tool to add the new information to the world model to reflect on what you have learned about the user.
-- Do NOT lose the information you already gathered.
+Everytime after user speaks, before you respond, you must update the world model XML with tools:
+  - Use the update_by_script tool to programmatically update the model
+  - Use rewrite_xml tool to perform large updates
+
+Requirements:
+${modelPrompt.value ? `- The world model should be related to ${modelPrompt.value}` : "The world model should be detailed and hierarchical."}
+- Before you respond, add the new information to the world model to reflect on what you have learned about the user.
+- Do NOT lose the information you have gathered. Keep adding to the model.
 - Keep the interview going and keep taking notes after each user utterance until the user decides to stop the interview.
 - You interview style is very concise. Let the user do the most talking.
       `);
