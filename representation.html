@@ -8,30 +8,43 @@
   </head>
 
   <body class="app-layout">
-    <div>
-      <button id="cam-toggle">Start camera</button>
-      <button id="cam-capture">Capture</button>
-      <span id="cam-task-count"></div>
-      <pre><code id="cam-description"></code></pre>
-      <pre><code id="cam-description"></code></pre>
-      <video id="monitor"></video>
-    </div>
+    <fieldset>
+      <legend>Perception</legend>
+      <input id="prompt" type="text" />
+      <button id="talk">Use microphone</button>
+      <span id="message-output"></span>
+    </fieldset>
 
-    <div>
+    <fieldset>
+      <legend>World model</legend>
+      <button id="forget">Forget</button>
+      <pre><code id="xml-preview"></code></pre>
+    </fieldset>
+
+    <fieldset>
+      <legend>Text</legend>
+      <button id="write">Write</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Visual</legend>
       <select id="model" name="model">
         <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
         <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
       </select>
-      <input id="prompt" type="text" />
-      <button id="talk">Use microphone</button>
-      <span id="message-output"></span>
-    </div>
-    <img id="image-output" />
-    <div id="image-prompt"></div>
-    <pre><code id="xml-preview"></code></pre>
+      <button id="render">Render</button>
+      <div id="image-prompt"></div>
+      <img id="image-output" />
+    </fieldset>
+
+    <fieldset>
+      <legend>Dialogue</legend>
+      <button id="discuss">Discuss</button>
+      <div id="discussion-prompt"></div>
+      <img id="discussion-output" />
+    </fieldset>
 
     <ai-bar auto-hide>
-      <!-- <stt-node></stt-node> -->
       <azure-stt-node></azure-stt-node>
       <llm-node></llm-node>
       <azure-tts-node></azure-tts-node>
@@ -45,6 +58,6 @@
       <camera-node video="monitor"></camera-node>
       <microphone-node></microphone-node>
     </ai-bar>
-    <script src="/src/main.ts" type="module"></script>
+    <script src="/src/representation.ts" type="module"></script>
   </body>
 </html>
