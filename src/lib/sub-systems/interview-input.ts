@@ -68,7 +68,7 @@ ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.valu
               script: z
                 .string()
                 .describe(
-                  "A DOM manipulation javascript that creates or updates the nodes and their content. global variable `world` is the root node of the world model.",
+                  "A DOM manipulation javascript that creates or updates the nodes and their content. global variable `document` is the root node that contains <world></world>",
                 ),
             }),
             run: update_by_script.bind(null, currentWorldXML),

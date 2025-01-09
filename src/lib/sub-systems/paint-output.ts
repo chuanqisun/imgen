@@ -1,4 +1,5 @@
 import {
+  BehaviorSubject,
   distinctUntilChanged,
   EMPTY,
   fromEvent,
@@ -24,6 +25,7 @@ export function usePaintOutput() {
   const renderButton = $<HTMLButtonElement>("#render")!;
   const togetherAINode = $<TogetherAINode>("together-ai-node")!;
   const continuousRender = $<HTMLInputElement>("#continuous-render")!;
+  const clickCount = new BehaviorSubject(0);
 
   const shouldContinuousRender$ = fromEvent(continuousRender, "change").pipe(map(() => continuousRender.checked));
 
@@ -35,9 +37,12 @@ export function usePaintOutput() {
     }),
   );
 
-  const imagePrompt$ = merge(continuousRenderPrompt$, fromEvent(renderButton, "click")).pipe(
+  const imagePrompt$ = merge(
+    continuousRenderPrompt$,
+    fromEvent(renderButton, "click").pipe(tap(() => clickCount.next(clickCount.value + 1))),
+  ).pipe(
     withLatestFrom(currentWorldXML),
-    map(([_, worldXML]) => worldXML),
+    map(([_, worldXML]) => `${visualPrompt.value}::${worldXML}::${clickCount.value}`),
     distinctUntilChanged(),
     switchMap((worldXML) => {
       if (worldXML === EMPTY_XML) return of("Empty");

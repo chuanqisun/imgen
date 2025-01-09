@@ -101,7 +101,8 @@ Now, use exactly one tool to take notes, and IMMEDIATELY respond to the user in 
                     properties: {
                       script: {
                         type: "string",
-                        description: "A DOM manipulation javascript. `document` is the root of the world",
+                        description:
+                          "A DOM manipulation javascript. `document` is the root node that contains <world></world>",
                       },
                     },
                   },

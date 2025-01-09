@@ -221,7 +221,8 @@ ${newFrame.xml}`,
                     properties: {
                       script: {
                         type: "string",
-                        description: "A DOM manipulation javascript. `document` is the root of the world",
+                        description:
+                          "A DOM manipulation javascript. `document` is the root node that contains <world></world>",
                       },
                     },
                   },

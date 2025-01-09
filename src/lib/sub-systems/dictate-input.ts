@@ -81,7 +81,8 @@ Use exactly one tool. Do NOT say anything after tool use.
                     properties: {
                       script: {
                         type: "string",
-                        description: "A DOM manipulation javascript. `document` is the root of the world",
+                        description:
+                          "A DOM manipulation javascript. `document` is the root node that container <world></world>",
                       },
                     },
                   },

@@ -30,6 +30,7 @@ export let sttTargetElement: HTMLInputElement | null = null;
 let shouldClear = false;
 export function useDelegatedPushToTalk() {
   const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
+  const azureTtsNode = $<AzureTtsNode>("azure-tts-node")!;
 
   const delegatedPushToTalk$ = merge(
     fromEvent(document, "mousedown").pipe(
@@ -37,6 +38,7 @@ export function useDelegatedPushToTalk() {
       filter((e) => e.action === "talk"),
       tap((e) => {
         (e.trigger as HTMLButtonElement).textContent = "Send";
+        azureTtsNode.clear();
         azureSttNode.start();
         shouldClear = !e.trigger?.hasAttribute("data-incremental");
         sttTargetElement =
