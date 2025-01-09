@@ -1,3 +1,3 @@
-# Imgen
+# SiXML
 
-XML guided image generation
+XML grounded Simulation Engine
