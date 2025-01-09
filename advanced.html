@@ -16,7 +16,7 @@
         <legend>Default chat</legend>
         <label for="chat-goal-prompt">Goal</label>
         <br />
-        <input id="chat-goal-prompt" type="text" placeholder="goal" />
+        <input id="chat-goal-prompt" type="text" placeholder="Goal" />
         <button data-action="talk" data-talk="chat-goal-prompt">Talk</button>
         <button id="start-chat">Start</button>
         <br />
@@ -32,7 +32,7 @@
 
       <fieldset>
         <legend>Show</legend>
-        <input id="camera-prompt" type="text" placeholder="goal" />
+        <input id="camera-prompt" type="text" placeholder="Goal" />
         <button data-action="talk" data-talk="camera-prompt">Talk</button> <span id="cam-task-count"></span> Pending
         <details>
           <summary>Monitor</summary>
@@ -47,7 +47,7 @@
 
       <fieldset>
         <legend>Interview</legend>
-        <input id="interview-prompt" type="text" placeholder="goal" />
+        <input id="interview-prompt" type="text" placeholder="Goal" />
         <button data-action="talk" data-talk="interview-prompt">Talk</button>
         <button data-action="start-interview">Start</button>
         <button id="realtime-push-to-talk">Push to talk</button>
@@ -65,7 +65,7 @@
     <h2>Memory</h2>
     <fieldset>
       <legend>World model</legend>
-      <input id="model-prompt" placeholder="attention" type="text" />
+      <input id="model-prompt" placeholder="Attention" type="text" />
       <button data-action="talk" data-talk="model-prompt">Talk</button>
       <button id="forget">Forget</button>
       <button id="load">Load</button>
@@ -77,7 +77,7 @@
     <div class="module-grid">
       <fieldset>
         <legend>Write</legend>
-        <input id="writing-prompt" type="text" placeholder="attention" />
+        <input id="writing-prompt" type="text" placeholder="Post-processing prompt" />
         <button data-action="talk" data-talk="writing-prompt">Talk</button>
         <button id="write">Write</button>
         <pre><code id="writing-preview"></code></pre>
@@ -90,7 +90,7 @@
           <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
           <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
         </select>
-        <input id="visual-prompt" type="text" placeholder="attention" />
+        <input id="visual-prompt" type="text" placeholder="Post-processing prompt" />
         <button data-action="talk" data-talk="visual-prompt">Talk</button>
         <button id="render">Render</button>
         <label><input type="checkbox" id="continuous-render" /> Continous</label>
@@ -100,7 +100,7 @@
 
       <fieldset>
         <legend>Discuss</legend>
-        <input id="dialogue-prompt" type="text" placeholder="attention" />
+        <input id="dialogue-prompt" type="text" placeholder="Post-processing prompt" />
         <button data-action="talk" data-talk="dialogue-prompt">Talk</button>
         <button id="simulate">Start</button>
       </fieldset>
