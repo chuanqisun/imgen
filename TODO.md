@@ -1,7 +1,6 @@
 # TODOs
 
 - Avatar visualization
-- Camera input
 - Editable memory
 - Prettier memory
 - Scene XML transform before NLP render
@@ -10,5 +9,6 @@
 
 # DONE
 
+- Camera input
 - Gossip output
 - Save/Load memory frame
