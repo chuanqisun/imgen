@@ -18,11 +18,16 @@
         <br />
         <input id="chat-goal-prompt" type="text" placeholder="goal" />
         <button data-action="talk" data-talk="chat-goal-prompt">Talk</button>
+        <button id="start-chat">Start</button>
         <br />
         <label for="default-talk-transcription">Chat</label>
         <br />
         <input id="default-talk-transcription" type="text" readonly />
         <button data-action="talk" data-talk="default-talk-transcription">Talk</button>
+        <details>
+          <summary>Transcript</summary>
+          <pre><code id="chat-transcript"></code></pre>
+        </details>
       </fieldset>
 
       <fieldset>

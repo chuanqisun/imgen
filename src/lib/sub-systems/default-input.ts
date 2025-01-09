@@ -1,5 +1,6 @@
-import { filter, fromEvent, map, Observable, switchMap, tap } from "rxjs";
+import { filter, fromEvent, map, merge, Observable, switchMap, tap } from "rxjs";
 import type { AzureSttNode } from "../ai-bar/lib/elements/azure-stt-node";
+import { AzureTtsNode } from "../ai-bar/lib/elements/azure-tts-node";
 import type { LlmNode } from "../ai-bar/lib/elements/llm-node";
 import type { AIBarEventDetail } from "../ai-bar/lib/events";
 import { system, user } from "../ai-bar/lib/message";
@@ -9,9 +10,20 @@ import { currentWorldXML, rewrite_xml, sttTargetElement, update_by_script } from
 export function useDefaultInput() {
   let submissionQueue: string[] = [];
   const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
+  const azureTssNode = $<AzureTtsNode>("azure-tts-node")!;
   const llmNode = $<LlmNode>("llm-node")!;
   const chatPrompt = $<HTMLInputElement>("#chat-goal-prompt")!;
   const defaultTalkOutput = $<HTMLInputElement>(`#default-talk-transcription`)!;
+  const transcriptDisplay = $<HTMLElement>("#chat-transcript")!;
+  const startChat = $<HTMLButtonElement>("#start-chat")!;
+  let transcript = [] as string[];
+
+  const start$ = fromEvent(startChat, "click").pipe(
+    tap(() => {
+      transcript = [];
+    }),
+    map(() => "Let's get started."),
+  );
 
   const recognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "event").pipe(
     tap(preventDefault),
@@ -21,7 +33,7 @@ export function useDefaultInput() {
     filter((v) => !!v?.length),
   );
 
-  const updateWorldModel$ = recognition$.pipe(
+  const updateWorldModel$ = merge(start$, recognition$).pipe(
     map((text) => {
       submissionQueue.push(text);
       return [...submissionQueue];
@@ -35,7 +47,7 @@ export function useDefaultInput() {
       const rewriteXml = rewrite_xml.bind(null, currentWorldXML);
       Object.defineProperty(rewriteXml, "name", { value: "rewrite_xml" }); // protect from bundler mangling
 
-      return new Observable((subscriber) => {
+      return new Observable<string>((subscriber) => {
         const llm = llmNode.getClient("aoai");
         const abortController = new AbortController();
 
@@ -46,8 +58,14 @@ export function useDefaultInput() {
 Chat with the user and take notes. The notes is a XML document that models the world.
 
 The goal and format of the chat must be the following:
-${chatPrompt.value?.length ? chatPrompt.value : "A casual chat, just to gather facts about things from the user without explicitly asking the user. Let user drive the direction of the conversation."}
- 
+${chatPrompt.value?.length ? chatPrompt.value : "A casual chat, just to gather facts about things from the user without explicitly asking the user. Prompt the user to keep the conversation going."}
+${
+  transcript.length
+    ? `\nThe conversation transcript so far:
+${transcript.join("\n")}
+`
+    : ""
+}
 The note you have taken so far:
 \`\`\`xml
 ${sceneXML}         
@@ -62,11 +80,11 @@ Note XML syntax guideline
 - Use concise natural language where description is needed.
 - Spatial relationship must be explicitly described.
 
-Now update the note XML based on user provided instructions. You must use one of the following tools:
+When you update the note XML, you MUST use one of the following tools:
 - update_by_script tool. You need to pass a DOM manipulation javascript to the tool. 
 - rewrite_xml. You must rewrite the entire scene xml.
 
-Use exactly one tool to take notes, then respond to the user in one short utterance. 
+Now, use exactly one tool to take notes, and IMMEDIATELY respond to the user in a short utterance. Always keep the conversation going by prompting user. 
 `,
               user`${inputs.join("; ")}`,
             ],
@@ -117,7 +135,10 @@ Use exactly one tool to take notes, then respond to the user in one short uttera
           .finalContent()
           .then((content) => {
             submissionQueue = submissionQueue.filter((v) => !inputs.includes(v));
-            subscriber.next(content);
+            transcript.push(...inputs.map((v) => `User: ${v}`));
+            transcript.push(`You: ${content ?? ""}`);
+            transcriptDisplay.innerText = transcript.join("\n");
+            subscriber.next(content ?? "");
           })
           .catch((e) => console.error(e))
           .finally(() => {
@@ -130,7 +151,9 @@ Use exactly one tool to take notes, then respond to the user in one short uttera
   );
 
   const speak$ = updateWorldModel$.pipe(
+    filter((content) => !!content),
     tap((content) => {
+      azureTssNode.queue(content);
       console.log(`AI: ${content}`);
     }),
   );
