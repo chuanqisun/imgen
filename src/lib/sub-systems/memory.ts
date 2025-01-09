@@ -11,12 +11,30 @@ export function useMemory() {
   const loadButton = $<HTMLButtonElement>("#load")!;
 
   saveButton.addEventListener("click", () => {
-    window.showSaveFilePicker().then((fileHandle) => {
-      fileHandle.createWritable().then((writable) => {
-        writable.write(currentWorldXML.value);
-        writable.close();
+    // xml only
+    window
+      .showSaveFilePicker({
+        types: [
+          {
+            description: "XML files",
+            accept: {
+              "text/xml": [".xml"],
+            },
+          },
+        ],
+        excludeAcceptAllOption: true,
+        suggestedName: `memory-frame-${new Date()
+          .toISOString()
+          .replace(/[:\-T]/g, "")
+          .split(".")
+          .at(0)}.xml`,
+      })
+      .then((fileHandle) => {
+        fileHandle.createWritable().then((writable) => {
+          writable.write(currentWorldXML.value);
+          writable.close();
+        });
       });
-    });
   });
 
   loadButton.addEventListener("click", () => {
