@@ -6,6 +6,7 @@ import { useInterviewInput } from "./lib/sub-systems/interview-input";
 import { useMemory } from "./lib/sub-systems/memory";
 import { usePaintOutput } from "./lib/sub-systems/paint-output";
 import { useDelegatedPushToTalk, useMicrophone } from "./lib/sub-systems/shared";
+import { useShowInput } from "./lib/sub-systems/show-input";
 import { useWritingOutput } from "./lib/sub-systems/writing-output";
 import "./main.css";
 
@@ -15,6 +16,7 @@ useMicrophone();
 merge(
   useDelegatedPushToTalk(),
   useMemory(),
+  useShowInput(),
   useInterviewInput(),
   useWritingOutput(),
   useDictateInput(),

@@ -15,6 +15,12 @@
       <legend>Show</legend>
       <input id="camera-prompt" type="text" placeholder="goal" />
       <button data-action="talk" data-talk="camera-prompt">Talk</button>
+      <video id="monitor" style="width: 200px; height: 200px"></video>
+      <button id="cam-toggle">Start camera</button>
+      <button id="cam-capture">Capture</button>
+      <label><input type="checkbox" id="auto-capture" /> Auto-capture</label>
+      <pre><code id="cam-description"></code></pre>
+      <div>Pending <span id="cam-task-count"></span></div>
     </fieldset>
 
     <fieldset>

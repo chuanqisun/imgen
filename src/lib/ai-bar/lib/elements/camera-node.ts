@@ -9,6 +9,10 @@ export function defineCameraNode() {
 }
 
 export class CameraNode extends HTMLElement {
+  static get observedAttributes() {
+    return ["detect-change"];
+  }
+
   private videoElement: HTMLVideoElement;
   private canvasElement: HTMLCanvasElement;
   private canvasContext: CanvasRenderingContext2D;
@@ -116,6 +120,13 @@ export class CameraNode extends HTMLElement {
       this.diffPreviewContext = null;
       this.stop();
     });
+  }
+
+  attributeChangedCallback(name: string, oldValue: string, newValue: string) {
+    if (name === "detect-change" && this.stream) {
+      this.stop();
+      this.start();
+    }
   }
 
   async getDeviceList(): Promise<MediaDeviceInfo[]> {
