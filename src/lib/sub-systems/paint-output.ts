@@ -87,7 +87,10 @@ Requirements:
     switchMap((prompt) => {
       if (prompt === "Empty") return of("https://placehold.co/400");
       const model = $<HTMLSelectElement>("#model")!.value;
-      return togetherAINode.generateImageDataURL(prompt, { model });
+      return togetherAINode.generateImageDataURL(prompt, { model }).catch((e) => {
+        console.error(e);
+        return "https://placehold.co/400?text=Error";
+      });
     }),
     tap((url) => (imageOutput.src = url)),
   );
