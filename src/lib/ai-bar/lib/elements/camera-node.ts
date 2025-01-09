@@ -17,7 +17,7 @@ export class CameraNode extends HTMLElement {
   private canvasElement: HTMLCanvasElement;
   private canvasContext: CanvasRenderingContext2D;
   private referenceFrame: ImageData | null = null;
-  private captureTriggerRatio: number = 0.01; // ratio of changed pixels to trigger a capture
+  private captureTriggerRatio: number = 0.02; // ratio of changed pixels to trigger a capture
   private pixelTriggerRadio: number = 0.04; // sensitivity for detecting pixel level change
   private dynamicScanDebounce = 200;
   private stream: MediaStream | null = null;
@@ -56,9 +56,9 @@ export class CameraNode extends HTMLElement {
     <select name="webcam" id="webcamSelect">
         <option value="" disabled selected>Select a webcam</option>
     </select>
-    <label for="pixelTriggerRadio">Pixel Trigger Ratio <span data-value="pixelTriggerRadio"></span></label>
-    <input type="range" id="pixelTriggerRadio" name="pixelTriggerRadio" min="0" max="1" step="0.01" value="0.2">
-    <label for="captureTriggerRatio">Capture Trigger Ratio <span data-value="capturueTriggerRatio"></span></label>
+    <label for="pixelTriggerRadio">Pixel Trigger Ratio <span data-value="pixelTriggerRadio"></span><br/>Reduce it until red markers start to flash on static area</label>
+    <input type="range" id="pixelTriggerRadio" name="pixelTriggerRadio" min="0" max="1" step="0.01" value="0.04">
+    <label for="captureTriggerRatio">Capture Trigger Ratio <span data-value="capturueTriggerRatio"></span><br/>Use it to set threshold for motion detection</label>
     <input type="range" id="captureTriggerRatio" name="captureTriggerRatio" min="0" max="1" step="0.001" value="0.02">
     <label for="capture-meter">Capture meter <span id="radio-display"></span></label>
     <meter id="capture-meter" min="0" max="1" low="0.02" value="0.01"></meter>
