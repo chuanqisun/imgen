@@ -1,5 +1,5 @@
 import { JSONParser } from "@streamparser/json";
-import { fromEvent, Observable, switchMap } from "rxjs";
+import { EMPTY, fromEvent, Observable, switchMap } from "rxjs";
 import { AzureTtsNode } from "../ai-bar/lib/elements/azure-tts-node";
 import type { LlmNode } from "../ai-bar/lib/elements/llm-node";
 import { system, user } from "../ai-bar/lib/message";
@@ -13,8 +13,14 @@ export function useDiscussionOutput() {
   const azureTtsNode = $<AzureTtsNode>("azure-tts-node")!;
 
   const discuss$ = fromEvent(simulateButton, "click").pipe(
-    switchMap(() => {
-      let result = "";
+    switchMap((e) => {
+      const trigger = e.target as HTMLButtonElement;
+      if (trigger.textContent === "Stop") {
+        trigger.textContent = "Start";
+        return EMPTY;
+      }
+
+      trigger.textContent = "Stop";
 
       return new Observable<{ speaker: string; utterance: string }>((subscriber) => {
         const parser = new JSONParser();
@@ -82,7 +88,10 @@ Now respond with the FULL dialogue. Do NOT stop until the entire dialogue is com
             subscriber.complete();
           });
 
-        return () => abortController.abort();
+        return () => {
+          abortController.abort();
+          azureTtsNode.clear();
+        };
       });
     }),
   );
