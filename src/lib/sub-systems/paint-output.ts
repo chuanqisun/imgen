@@ -1,4 +1,4 @@
-import { fromEvent, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
+import { EMPTY, fromEvent, map, merge, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
 import type { LlmNode } from "../ai-bar/lib/elements/llm-node";
 import type { TogetherAINode } from "../ai-bar/lib/elements/together-ai-node";
 import { system, user } from "../ai-bar/lib/message";
@@ -12,8 +12,19 @@ export function usePaintOutput() {
   const llmNode = $<LlmNode>("llm-node")!;
   const renderButton = $<HTMLButtonElement>("#render")!;
   const togetherAINode = $<TogetherAINode>("together-ai-node")!;
+  const continuousRender = $<HTMLInputElement>("#continuous-render")!;
 
-  const imagePrompt$ = fromEvent(renderButton, "click").pipe(
+  const shouldContinuousRender$ = fromEvent(continuousRender, "change").pipe(map(() => continuousRender.checked));
+
+  const continuousRenderPrompt$ = shouldContinuousRender$.pipe(
+    switchMap((shouldContinuousRender) => {
+      if (!shouldContinuousRender) return EMPTY;
+
+      return currentWorldXML;
+    }),
+  );
+
+  const imagePrompt$ = merge(continuousRenderPrompt$, fromEvent(renderButton, "click")).pipe(
     withLatestFrom(currentWorldXML),
     switchMap(([_, worldXML]) => {
       if (worldXML === EMPTY_XML) return of("Empty");
