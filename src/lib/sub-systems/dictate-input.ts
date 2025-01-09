@@ -24,7 +24,10 @@ export function useDictateInput() {
   );
 
   const updateWorldModel$ = voiceSubmit$.pipe(
-    map((text) => [...submissionQueue, text]),
+    map((text) => {
+      submissionQueue.push(text);
+      return [...submissionQueue];
+    }),
     switchMap((inputs) => {
       const sceneXML = currentWorldXML.value;
       console.log({ inputs, sceneXML });
