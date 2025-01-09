@@ -12,7 +12,7 @@ export function useMemory() {
   const saveButton = $<HTMLButtonElement>("#save")!;
   const loadButton = $<HTMLButtonElement>("#load")!;
 
-  fromEvent(xmlEditor, "change").pipe(
+  const reflectManualEdit$ = fromEvent(xmlEditor, "change").pipe(
     tap((e) => {
       const value = (e as CustomEvent<string>).detail;
       currentWorldXML.next(value);
@@ -56,5 +56,5 @@ export function useMemory() {
     });
   });
 
-  return merge(renderXML$, forget$);
+  return merge(renderXML$, forget$, reflectManualEdit$);
 }
