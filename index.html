@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Storybox</title>
+    <title>SiXML</title>
   </head>
 
   <body class="app-layout">
@@ -12,6 +12,7 @@
       <select id="model" name="model">
         <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
         <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
+        <option value="black-forest-labs/FLUX.1-dev">FLUX.1-dev</option>
       </select>
       <input id="prompt" type="text" />
       <button id="talk">Use microphone</button>
@@ -20,6 +21,7 @@
     <img id="image-output" />
     <div id="image-prompt"></div>
     <pre><code id="xml-preview"></code></pre>
+    <code-editor-element id="xml-editor"></code-editor-element>
     <footer>SiXML is an XML-grounded Simulation Engine. <a href="./advanced.html">Advanced mode</a></footer>
 
     <ai-bar auto-hide>

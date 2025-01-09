@@ -6,13 +6,16 @@ import { system, user } from "./lib/ai-bar/lib/message";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { $, parseActionEvent, preventDefault, stopPropagation } from "./lib/dom";
 
+import { CodeEditorElement, defineCodeEditorElement } from "./code-editor/code-editor-element";
 import type { AzureSttNode } from "./lib/ai-bar/lib/elements/azure-stt-node";
 import "./main.css";
 
 loadAIBar();
+defineCodeEditorElement();
 
 const llmNode = $<LlmNode>("llm-node")!;
-const xmlPreview = $<HTMLElement>("#xml-preview")!;
+// const xmlPreview = $<HTMLElement>("#xml-preview")!;
+const xmlEditor = $<CodeEditorElement>("#xml-editor")!;
 const togetherAINode = $<TogetherAINode>("together-ai-node")!;
 const promptInput = $<HTMLInputElement>("#prompt")!;
 const messageOutput = $<HTMLElement>("#message-output")!;
@@ -25,7 +28,12 @@ let submissionQueue: string[] = [];
 
 const currentSceneXML = new BehaviorSubject("<scene></scene>");
 
-const renderXML$ = currentSceneXML.pipe(tap((xml) => (xmlPreview.textContent = xml)));
+const renderXML$ = currentSceneXML.pipe(tap((xml) => (xmlEditor.value = xml)));
+
+xmlEditor.addEventListener("change", (e) => {
+  const value = (e as CustomEvent<string>).detail;
+  currentSceneXML.next(value);
+});
 
 talkButton.addEventListener(
   "mousedown",
