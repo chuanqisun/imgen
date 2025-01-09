@@ -6,6 +6,11 @@ import { system, user } from "../ai-bar/lib/message";
 import { $ } from "../dom";
 import { currentWorldXML } from "./shared";
 
+const voiceMap = new Map([
+  ["expert", "en-US-DavisNeural"],
+  ["novice", "en-US-EmmaMultilingualNeural"],
+]);
+
 export function useDiscussionOutput() {
   const simulateButton = $<HTMLButtonElement>("#simulate")!;
   const dialoguePrompt = $<HTMLInputElement>("#dialogue-prompt")!;
@@ -28,7 +33,11 @@ export function useDiscussionOutput() {
           if (typeof value.key === "number" && typeof value.value === "object") {
             const { speaker, utterance } = value.value as any;
             console.log([speaker, utterance]);
-            azureTtsNode.queue(utterance);
+
+            azureTtsNode.queue(utterance, {
+              voice: voiceMap.get(speaker) ?? "en-US-EmmaMultilingualNeural",
+            });
+
             subscriber.next({ speaker, utterance });
           }
         };
@@ -77,14 +86,16 @@ Now respond with the FULL dialogue. Do NOT stop until the entire dialogue is com
               const delta = chunk.choices.at(0)?.delta?.content ?? "";
               if (!delta) continue;
 
-              parser.write(delta);
+              try {
+                parser.write(delta);
+              } catch (e) {}
             }
-            parser.end();
           })
           .catch((err) => {
             parser.end();
           })
           .finally(() => {
+            parser.end();
             subscriber.complete();
           });
 
