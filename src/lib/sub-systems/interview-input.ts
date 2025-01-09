@@ -1,10 +1,10 @@
-import { filter, fromEvent, map, merge, tap, type BehaviorSubject, type Subscription } from "rxjs";
+import { filter, fromEvent, map, merge, tap, type Subscription } from "rxjs";
 import { z } from "zod";
 import type { OpenAIRealtimeNode } from "../ai-bar/lib/elements/openai-realtime-node";
 import { $, parseActionEvent } from "../dom";
-import { EMPTY_XML, rewrite_xml, update_by_script } from "./shared";
+import { currentWorldXML, EMPTY_XML, rewrite_xml, update_by_script } from "./shared";
 
-export function useInterviewInput(options: { currentWorldXML: BehaviorSubject<string> }) {
+export function useInterviewInput() {
   const interviewPrompt = $<HTMLInputElement>("#interview-prompt")!;
   const modelPrompt = $<HTMLInputElement>("#model-prompt")!;
   const realtimeNode = $<OpenAIRealtimeNode>("openai-realtime-node")!;
@@ -25,7 +25,7 @@ export function useInterviewInput(options: { currentWorldXML: BehaviorSubject<st
     }),
   );
 
-  const instructionUpdate$ = options.currentWorldXML.pipe(
+  const instructionUpdate$ = currentWorldXML.pipe(
     tap((xml) => {
       realtimeNode.updateSessionInstructions(`
 Conduct an interview to model the user. The interview should be focused on the following goal:
@@ -71,7 +71,7 @@ ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.valu
                   "A DOM manipulation javascript that creates or updates the nodes and their content. global variable `world` is the root node of the world model.",
                 ),
             }),
-            run: update_by_script.bind(null, options.currentWorldXML),
+            run: update_by_script.bind(null, currentWorldXML),
           })
           .addDraftTool({
             name: "rewrite_xml",
@@ -79,7 +79,7 @@ ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.valu
             parameters: z.object({
               xml: z.string().describe("The new scene xml, top level tag must be <world>...</world>"),
             }),
-            run: rewrite_xml.bind(null, options.currentWorldXML),
+            run: rewrite_xml.bind(null, currentWorldXML),
           })
           .commitDraftTools();
 
