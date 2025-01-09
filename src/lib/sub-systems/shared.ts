@@ -1,8 +1,70 @@
-import { BehaviorSubject } from "rxjs";
+import { BehaviorSubject, filter, fromEvent, map, merge, tap } from "rxjs";
+import type { AzureSttNode } from "../ai-bar/lib/elements/azure-stt-node";
+import type { AIBarEventDetail } from "../ai-bar/lib/events";
+import { $, parseActionEvent, preventDefault, stopPropagation } from "../dom";
 
 export const EMPTY_XML = "<world></world>";
 
 export const currentWorldXML = new BehaviorSubject(EMPTY_XML);
+
+export function useMicrophone() {
+  const talkButton = $<HTMLButtonElement>("#use-microphone")!;
+  const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
+
+  talkButton.addEventListener(
+    "click",
+    (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      azureSttNode.startMicrophone();
+      talkButton.remove();
+    },
+    { once: true },
+  );
+}
+
+export let sttTargetElement: HTMLInputElement | null = null;
+let shouldClear = false;
+export function useDelegatedPushToTalk() {
+  const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
+
+  const delegatedPushToTalk$ = merge(
+    fromEvent(document, "mousedown").pipe(
+      map(parseActionEvent),
+      filter((e) => e.action === "talk"),
+      tap((e) => {
+        (e.trigger as HTMLButtonElement).textContent = "Send";
+        azureSttNode.start();
+        shouldClear = e.trigger?.hasAttribute("data-clear") ?? false;
+        sttTargetElement =
+          $<HTMLInputElement>(`#${(e.trigger as HTMLElement).getAttribute("data-talk") ?? ""}`) ?? null;
+      }),
+    ),
+    fromEvent(document, "mouseup").pipe(
+      map(parseActionEvent),
+      filter((e) => e.action === "talk"),
+      tap((e) => {
+        (e.trigger as HTMLButtonElement).textContent = "Talk";
+        azureSttNode.stop();
+      }),
+    ),
+  );
+
+  const delegatedRecognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "event").pipe(
+    tap(preventDefault),
+    tap(stopPropagation),
+    map((e) => (e as CustomEvent<AIBarEventDetail>).detail.recognized?.text as string),
+    filter((v) => !!v?.length),
+    tap((text) => {
+      if (!sttTargetElement) return;
+      if (shouldClear) sttTargetElement.value = "";
+      if (sttTargetElement.value) text = sttTargetElement.value + " " + text;
+      sttTargetElement.value = text;
+    }),
+  );
+
+  return merge(delegatedPushToTalk$, delegatedRecognition$);
+}
 
 // TOOLS
 export function update_by_script(scene$: BehaviorSubject<string>, args: { script: string }) {

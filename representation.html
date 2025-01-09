@@ -9,6 +9,8 @@
 
   <body class="app-layout">
     <h2>Input</h2>
+    <button id="use-microphone">Use microphone</button>
+
     <fieldset>
       <legend>Show</legend>
       <input id="camera-prompt" type="text" placeholder="goal" />
@@ -26,8 +28,8 @@
 
     <fieldset>
       <legend>Tell</legend>
-      <input id="prompt" type="text" />
-      <button id="talk">Use microphone</button>
+      <input id="tell-prompt" type="text" readonly />
+      <button data-action="talk" data-talk="tell-prompt" data-clear>Talk</button>
       <span id="message-output"></span>
     </fieldset>
 

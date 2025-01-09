@@ -1,55 +1,26 @@
-import { filter, fromEvent, map, merge, Observable, switchMap, tap } from "rxjs";
+import { filter, fromEvent, map, Observable, switchMap, tap } from "rxjs";
 import type { AzureSttNode } from "../ai-bar/lib/elements/azure-stt-node";
 import type { LlmNode } from "../ai-bar/lib/elements/llm-node";
 import type { AIBarEventDetail } from "../ai-bar/lib/events";
 import { system, user } from "../ai-bar/lib/message";
 import { $, preventDefault, stopPropagation } from "../dom";
-import { currentWorldXML, rewrite_xml, update_by_script } from "./shared";
+import { currentWorldXML, rewrite_xml, sttTargetElement, update_by_script } from "./shared";
 
 export function useDictateInput() {
   let submissionQueue: string[] = [];
-  const talkButton = $<HTMLButtonElement>("#talk")!;
   const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
   const llmNode = $<LlmNode>("llm-node")!;
   const messageOutput = $<HTMLElement>("#message-output")!;
-
-  talkButton.addEventListener(
-    "mousedown",
-    (e) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      azureSttNode.startMicrophone();
-      talkButton.textContent = "Hold to talk";
-    },
-    { once: true },
-  );
-
-  const holdToTalk$ = merge(
-    merge(
-      fromEvent(talkButton, "keydown").pipe(filter((e) => (e as KeyboardEvent).key === " ")),
-      fromEvent(talkButton, "mousedown"),
-    ).pipe(
-      tap(() => {
-        azureSttNode.start();
-        talkButton.textContent = "Release to send";
-      }),
-    ),
-    merge(
-      fromEvent(talkButton, "keyup").pipe(filter((e) => (e as KeyboardEvent).key === " ")),
-      fromEvent(talkButton, "mouseup"),
-    ).pipe(
-      tap(() => {
-        azureSttNode.stop();
-        talkButton.textContent = "Hold to talk";
-      }),
-    ),
-  );
+  const tellPrompt = $<HTMLInputElement>("#tell-prompt")!;
 
   const voiceSubmit$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "event").pipe(
     tap(preventDefault),
     tap(stopPropagation),
     map((e) => (e as CustomEvent<AIBarEventDetail>).detail.recognized?.text as string),
     filter((v) => !!v?.length),
+    filter(() => {
+      return tellPrompt === sttTargetElement;
+    }),
   );
 
   const updateWorldModel$ = voiceSubmit$.pipe(
@@ -154,5 +125,5 @@ Use exactly one tool. Do NOT say anything after tool use.
     }),
   );
 
-  return merge(holdToTalk$, updateWorldModel$);
+  return updateWorldModel$;
 }

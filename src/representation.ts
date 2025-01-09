@@ -1,15 +1,14 @@
-import { filter, fromEvent, map, merge, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
-import { type AIBarEventDetail } from "./lib/ai-bar/lib/ai-bar";
+import { filter, fromEvent, map, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
 import { LlmNode } from "./lib/ai-bar/lib/elements/llm-node";
 import type { TogetherAINode } from "./lib/ai-bar/lib/elements/together-ai-node";
 import { system, user } from "./lib/ai-bar/lib/message";
 import { loadAIBar } from "./lib/ai-bar/loader";
-import { $, parseActionEvent, preventDefault, stopPropagation } from "./lib/dom";
+import { $, parseActionEvent } from "./lib/dom";
 
 import type { AzureSttNode } from "./lib/ai-bar/lib/elements/azure-stt-node";
 import { useDictateInput } from "./lib/sub-systems/dictate-input";
 import { useInterviewInput } from "./lib/sub-systems/interview-input";
-import { currentWorldXML, EMPTY_XML } from "./lib/sub-systems/shared";
+import { currentWorldXML, EMPTY_XML, useDelegatedPushToTalk, useMicrophone } from "./lib/sub-systems/shared";
 import { useWritingOutput } from "./lib/sub-systems/writing-output";
 import "./main.css";
 
@@ -28,42 +27,11 @@ const renderXML$ = currentWorldXML.pipe(tap((xml) => (xmlPreview.textContent = x
 
 const forget$ = fromEvent(forgetButton, "click").pipe(tap(() => currentWorldXML.next(EMPTY_XML)));
 
-// delegated push to talk
-let sttTargetElement: HTMLInputElement | null = null;
+useMicrophone();
 
-const delegatedPushToTalk$ = merge(
-  fromEvent(document, "mousedown").pipe(
-    map(parseActionEvent),
-    filter((e) => e.action === "talk"),
-    tap((e) => {
-      (e.trigger as HTMLButtonElement).textContent = "Send";
-      azureSttNode.start();
-      sttTargetElement = $<HTMLInputElement>(`#${(e.trigger as HTMLElement).getAttribute("data-talk") ?? ""}`) ?? null;
-    }),
-  ),
-  fromEvent(document, "mouseup").pipe(
-    map(parseActionEvent),
-    filter((e) => e.action === "talk"),
-    tap((e) => {
-      (e.trigger as HTMLButtonElement).textContent = "Talk";
-      azureSttNode.stop();
-    }),
-  ),
-);
-
-const delegatedRecognition$ = fromEvent<CustomEvent<AIBarEventDetail>>(azureSttNode, "event").pipe(
-  tap(preventDefault),
-  tap(stopPropagation),
-  map((e) => (e as CustomEvent<AIBarEventDetail>).detail.recognized?.text as string),
-  filter((v) => !!v?.length),
-  tap((text) => {
-    if (!sttTargetElement) return;
-    if (sttTargetElement.value) text = sttTargetElement.value + " " + text;
-    sttTargetElement.value = text;
-  }),
-);
-
-merge(delegatedPushToTalk$, delegatedRecognition$).subscribe();
+// PUSH-TO-TALK
+const pushToTalk$ = useDelegatedPushToTalk();
+pushToTalk$.subscribe();
 
 // INTERVIEW SUB-SYSTEM
 const interviewInput$ = useInterviewInput({ currentWorldXML });
