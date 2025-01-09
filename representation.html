@@ -9,7 +9,7 @@
 
   <body class="app-layout">
     <h2>Input</h2>
-    <button id="use-microphone">Use microphone</button>
+    <button id="use-microphone">Enable audio device</button>
 
     <fieldset>
       <legend>Show</legend>
@@ -29,7 +29,7 @@
     <fieldset>
       <legend>Tell</legend>
       <input id="tell-prompt" type="text" readonly />
-      <button data-action="talk" data-talk="tell-prompt" data-clear>Talk</button>
+      <button data-action="talk" data-talk="tell-prompt">Talk</button>
       <span id="message-output"></span>
     </fieldset>
 
@@ -69,12 +69,10 @@
     </fieldset>
 
     <fieldset>
-      <legend>Gossip</legend>
+      <legend>Discussion</legend>
       <input id="dialogue-prompt" type="text" placeholder="attention" />
       <button data-action="talk" data-talk="dialogue-prompt">Talk</button>
-      <button id="discuss">Discuss</button>
-      <div id="discussion-prompt"></div>
-      <img id="discussion-output" />
+      <button id="simulate">Simulate</button>
     </fieldset>
 
     <ai-bar auto-hide>

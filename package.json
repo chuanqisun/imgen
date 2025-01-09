@@ -13,6 +13,7 @@
     "@google/generative-ai": "^0.21.0",
     "@streamparser/json": "^0.0.21",
     "@types/wicg-file-system-access": "^2023.10.5",
+    "htmlparser2": "^10.0.0",
     "lit": "^3.2.1",
     "openai": "^4.77.0",
     "pixelmatch": "^6.0.0",

@@ -1,5 +1,6 @@
 import { BehaviorSubject, filter, fromEvent, map, merge, tap } from "rxjs";
 import type { AzureSttNode } from "../ai-bar/lib/elements/azure-stt-node";
+import type { AzureTtsNode } from "../ai-bar/lib/elements/azure-tts-node";
 import type { AIBarEventDetail } from "../ai-bar/lib/events";
 import { $, parseActionEvent, preventDefault, stopPropagation } from "../dom";
 
@@ -10,6 +11,7 @@ export const currentWorldXML = new BehaviorSubject(EMPTY_XML);
 export function useMicrophone() {
   const talkButton = $<HTMLButtonElement>("#use-microphone")!;
   const azureSttNode = $<AzureSttNode>("azure-stt-node")!;
+  const azureTtsNode = $<AzureTtsNode>("azure-tts-node")!;
 
   talkButton.addEventListener(
     "click",
@@ -17,6 +19,7 @@ export function useMicrophone() {
       e.preventDefault();
       e.stopImmediatePropagation();
       azureSttNode.startMicrophone();
+      azureTtsNode.startSpeaker();
       talkButton.remove();
     },
     { once: true },
@@ -35,7 +38,7 @@ export function useDelegatedPushToTalk() {
       tap((e) => {
         (e.trigger as HTMLButtonElement).textContent = "Send";
         azureSttNode.start();
-        shouldClear = e.trigger?.hasAttribute("data-clear") ?? false;
+        shouldClear = !e.trigger?.hasAttribute("data-incremental");
         sttTargetElement =
           $<HTMLInputElement>(`#${(e.trigger as HTMLElement).getAttribute("data-talk") ?? ""}`) ?? null;
       }),
