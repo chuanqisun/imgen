@@ -25,7 +25,9 @@ export class CodeEditorElement extends HTMLElement {
           if (focusing) return null;
           const value = state.doc.toString();
           this.value = value;
-          this.dispatchEvent(new CustomEvent("change", { detail: this.value }));
+
+          const formattedValue = formatXml(value);
+          this.dispatchEvent(new CustomEvent("change", { detail: formattedValue }));
           return null;
         }),
       ],
@@ -45,13 +47,15 @@ export class CodeEditorElement extends HTMLElement {
   }
 
   set value(value: string) {
-    const prettyXml = formatXml(value);
-    this.editorView?.dispatch({
-      changes: {
-        from: 0,
-        to: this.editorView.state.doc.length,
-        insert: prettyXml,
-      },
+    setTimeout(() => {
+      const prettyXml = formatXml(value);
+      this.editorView?.dispatch({
+        changes: {
+          from: 0,
+          to: this.editorView.state.doc.length,
+          insert: prettyXml,
+        },
+      });
     });
   }
 

@@ -53,8 +53,8 @@ export function useDiscussionOutput() {
 Simulate a dialogue based on the user provided world model. 
 
 The dialogue must involve exactly two participants. The concrete persona of each participant depends on the specific requirement, but their abstract roles must be these:
-- Participant 1 is the expert, who is knowledgeable about the world model, provides authoritative answers, confident, and good listener.
-- Participant 2 is the novice, who is curious, takes the initiative to ask questions, and is eager to learn.
+- Participant 1 is the expert (male), who is knowledgeable about the world model, provides authoritative answers, confident, and good listener.
+- Participant 2 is the novice (female), who is curious, takes the initiative to ask questions, and is eager to learn.
 
 The dialogue must meet this requirement: ${dialoguePrompt.value.length ? dialoguePrompt.value : "related to the world model"}
 

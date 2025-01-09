@@ -41,7 +41,7 @@ Based on user's writing prompt, produce the writing based on the world knowledge
           )
           .then(async (res) => {
             for await (const chunk of res) {
-              const text = chunk?.choices[0]?.delta.content ?? "";
+              const text = chunk?.choices[0]?.delta?.content ?? "";
               if (text) subscriber.next(text);
             }
           });

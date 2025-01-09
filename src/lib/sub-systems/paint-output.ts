@@ -1,4 +1,15 @@
-import { EMPTY, fromEvent, map, merge, Observable, of, switchMap, tap, withLatestFrom } from "rxjs";
+import {
+  distinctUntilChanged,
+  EMPTY,
+  fromEvent,
+  map,
+  merge,
+  Observable,
+  of,
+  switchMap,
+  tap,
+  withLatestFrom,
+} from "rxjs";
 import type { LlmNode } from "../ai-bar/lib/elements/llm-node";
 import type { TogetherAINode } from "../ai-bar/lib/elements/together-ai-node";
 import { system, user } from "../ai-bar/lib/message";
@@ -26,7 +37,9 @@ export function usePaintOutput() {
 
   const imagePrompt$ = merge(continuousRenderPrompt$, fromEvent(renderButton, "click")).pipe(
     withLatestFrom(currentWorldXML),
-    switchMap(([_, worldXML]) => {
+    map(([_, worldXML]) => worldXML),
+    distinctUntilChanged(),
+    switchMap((worldXML) => {
       if (worldXML === EMPTY_XML) return of("Empty");
 
       return new Observable<string>((subscriber) => {
@@ -36,14 +49,14 @@ export function usePaintOutput() {
           .create(
             {
               messages: [
-                system`Follow user's instruction to convert the following world model (XML) to a single paragraph of natural language description.
+                system`Follow user's instruction to interpret the following XML world description to a single paragraph of natural language description.
 
 ${worldXML}
 
 Requirements:
-- Describe the scene systematically. Use user's instruction to determine subject and scene, foreground and background, content and style.
-- Do not imagine or infer unmentioned details.
-- Be concise. Do NOT add narrative or emotional description.
+- Use user's instruction to interpret the subject and scene, foreground and background, content and style. Describe them as much details as you can logically infer.
+- Be observative. Do NOT add narrative or emotional description.
+- Be concise. Describe only a single scene. If multiple scenes are described, construct the most representative moment to depict.
         `,
                 user`Instruction: ${visualPrompt.value.length ? visualPrompt.value : "Faithfully describe the scene. Now describe the scene based on my instruction."}`,
               ],

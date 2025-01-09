@@ -11,36 +11,38 @@
     <h2>Input</h2>
     <button id="use-microphone">Enable audio device</button>
 
-    <fieldset>
-      <legend>Show</legend>
-      <input id="camera-prompt" type="text" placeholder="goal" />
-      <button data-action="talk" data-talk="camera-prompt">Talk</button> <span id="cam-task-count"></span> Pending
-      <details>
-        <summary>Monitor</summary>
-        <video id="monitor" style="width: 200px; height: 200px" poster="https://placehold.co/200?text=STREAM"></video>
-      </details>
-      <button id="cam-toggle">Start camera</button>
-      <button id="cam-capture">Capture</button>
-      <label><input type="checkbox" id="auto-capture" /> Auto-capture</label>&ensp;
-      <label><input type="checkbox" id="temporal-mode" /> Temporal</label>
-      <pre><code id="cam-description"></code></pre>
-    </fieldset>
+    <div class="module-grid">
+      <fieldset>
+        <legend>Show</legend>
+        <input id="camera-prompt" type="text" placeholder="goal" />
+        <button data-action="talk" data-talk="camera-prompt">Talk</button> <span id="cam-task-count"></span> Pending
+        <details>
+          <summary>Monitor</summary>
+          <video id="monitor" style="width: 200px; height: 200px" poster="https://placehold.co/200?text=STREAM"></video>
+        </details>
+        <button id="cam-toggle">Start camera</button>
+        <button id="cam-capture">Capture</button>
+        <label><input type="checkbox" id="auto-capture" /> Auto-capture</label>&ensp;
+        <label><input type="checkbox" id="temporal-mode" /> Temporal</label>
+        <pre><code id="cam-description"></code></pre>
+      </fieldset>
 
-    <fieldset>
-      <legend>Interview</legend>
-      <input id="interview-prompt" type="text" placeholder="goal" />
-      <button data-action="talk" data-talk="interview-prompt">Talk</button>
-      <button data-action="start-interview">Start</button>
-      <button id="realtime-push-to-talk">Push to talk</button>
-      <label><input type="checkbox" id="always-on" /> Always on</label>
-    </fieldset>
+      <fieldset>
+        <legend>Interview</legend>
+        <input id="interview-prompt" type="text" placeholder="goal" />
+        <button data-action="talk" data-talk="interview-prompt">Talk</button>
+        <button data-action="start-interview">Start</button>
+        <button id="realtime-push-to-talk">Push to talk</button>
+        <label><input type="checkbox" id="always-on" /> Always on</label>
+      </fieldset>
 
-    <fieldset>
-      <legend>Tell</legend>
-      <input id="tell-prompt" type="text" readonly />
-      <button data-action="talk" data-talk="tell-prompt">Talk</button>
-      <span id="message-output"></span>
-    </fieldset>
+      <fieldset>
+        <legend>Tell</legend>
+        <input id="tell-prompt" type="text" readonly />
+        <button data-action="talk" data-talk="tell-prompt">Talk</button>
+        <span id="message-output"></span>
+      </fieldset>
+    </div>
 
     <h2>Memory</h2>
     <fieldset>
@@ -50,40 +52,41 @@
       <button id="forget">Forget</button>
       <button id="load">Load</button>
       <button id="save">Save</button>
-      <!-- <pre><code id="xml-preview"></code></pre> -->
       <code-editor-element id="xml-editor"></code-editor-element>
     </fieldset>
 
     <h2>Output</h2>
-    <fieldset>
-      <legend>Write</legend>
-      <input id="writing-prompt" type="text" placeholder="attention" />
-      <button data-action="talk" data-talk="writing-prompt">Talk</button>
-      <button id="write">Write</button>
-      <pre><code id="writing-preview"></code></pre>
-      <article></article>
-    </fieldset>
+    <div class="module-grid">
+      <fieldset>
+        <legend>Write</legend>
+        <input id="writing-prompt" type="text" placeholder="attention" />
+        <button data-action="talk" data-talk="writing-prompt">Talk</button>
+        <button id="write">Write</button>
+        <pre><code id="writing-preview"></code></pre>
+        <article></article>
+      </fieldset>
 
-    <fieldset>
-      <legend>Paint</legend>
-      <select id="model" name="model">
-        <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
-        <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
-      </select>
-      <input id="visual-prompt" type="text" placeholder="attention" />
-      <button data-action="talk" data-talk="visual-prompt">Talk</button>
-      <button id="render">Render</button>
-      <label><input type="checkbox" id="continuous-render" /> Continous</label>
-      <div id="image-prompt"></div>
-      <img id="image-output" />
-    </fieldset>
+      <fieldset>
+        <legend>Paint</legend>
+        <select id="model" name="model">
+          <option value="black-forest-labs/FLUX.1-schnell-Free" selected>FLUX.1-schnell-Free</option>
+          <option value="black-forest-labs/FLUX.1-schnell">FLUX.1-schnell</option>
+        </select>
+        <input id="visual-prompt" type="text" placeholder="attention" />
+        <button data-action="talk" data-talk="visual-prompt">Talk</button>
+        <button id="render">Render</button>
+        <label><input type="checkbox" id="continuous-render" /> Continous</label>
+        <img id="image-output" />
+        <div id="image-prompt"></div>
+      </fieldset>
 
-    <fieldset>
-      <legend>Discussion</legend>
-      <input id="dialogue-prompt" type="text" placeholder="attention" />
-      <button data-action="talk" data-talk="dialogue-prompt">Talk</button>
-      <button id="simulate">Start</button>
-    </fieldset>
+      <fieldset>
+        <legend>Discuss</legend>
+        <input id="dialogue-prompt" type="text" placeholder="attention" />
+        <button data-action="talk" data-talk="dialogue-prompt">Talk</button>
+        <button id="simulate">Start</button>
+      </fieldset>
+    </div>
 
     <ai-bar auto-hide>
       <azure-stt-node></azure-stt-node>
