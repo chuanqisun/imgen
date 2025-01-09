@@ -1,0 +1,13 @@
+code-editor-element {
+  display: grid;
+  flex-grow: 1;
+}
+
+.cm-editor {
+  height: 100%;
+  overflow: auto;
+
+  &.cm-focused {
+    outline: none;
+  }
+}

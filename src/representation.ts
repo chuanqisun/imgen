@@ -1,4 +1,5 @@
 import { merge } from "rxjs";
+import { defineCodeEditorElement } from "./code-editor/code-editor-element";
 import { loadAIBar } from "./lib/ai-bar/loader";
 import { useDictateInput } from "./lib/sub-systems/dictate-input";
 import { useDiscussionOutput } from "./lib/sub-systems/discussion-output";
@@ -11,6 +12,7 @@ import { useWritingOutput } from "./lib/sub-systems/writing-output";
 import "./main.css";
 
 loadAIBar();
+defineCodeEditorElement();
 useMicrophone();
 
 merge(

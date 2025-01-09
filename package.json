@@ -10,9 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@codemirror/lang-xml": "^6.1.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.36.1",
     "@google/generative-ai": "^0.21.0",
     "@streamparser/json": "^0.0.21",
     "@types/wicg-file-system-access": "^2023.10.5",
+    "codemirror": "^6.0.1",
     "htmlparser2": "^10.0.0",
     "lit": "^3.2.1",
     "openai": "^4.77.0",
@@ -20,6 +25,7 @@
     "prettier": "^3.4.2",
     "rxjs": "^7.8.1",
     "together-ai": "^0.10.0",
+    "xml-formatter": "^3.6.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {
