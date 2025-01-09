@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Storybox</title>
+    <title>Representation</title>
   </head>
 
   <body class="app-layout">
@@ -12,6 +12,19 @@
     <button id="use-microphone">Enable audio device</button>
 
     <div class="module-grid">
+      <fieldset>
+        <legend>Default chat</legend>
+        <label for="chat-goal-prompt">Goal</label>
+        <br />
+        <input id="chat-goal-prompt" type="text" placeholder="goal" />
+        <button data-action="talk" data-talk="chat-goal-prompt">Talk</button>
+        <br />
+        <label for="default-talk-transcription">Chat</label>
+        <br />
+        <input id="default-talk-transcription" type="text" readonly />
+        <button data-action="talk" data-talk="default-talk-transcription">Talk</button>
+      </fieldset>
+
       <fieldset>
         <legend>Show</legend>
         <input id="camera-prompt" type="text" placeholder="goal" />

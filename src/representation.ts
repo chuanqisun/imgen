@@ -10,6 +10,7 @@ import { useDelegatedPushToTalk, useMicrophone } from "./lib/sub-systems/shared"
 import { useShowInput } from "./lib/sub-systems/show-input";
 import { useWritingOutput } from "./lib/sub-systems/writing-output";
 
+import { useDefaultInput } from "./lib/sub-systems/default-input";
 import "./main.css";
 import "./representation.css";
 
@@ -21,9 +22,10 @@ merge(
   useDelegatedPushToTalk(),
   useMemory(),
   useShowInput(),
+  useDefaultInput(),
   useInterviewInput(),
-  useWritingOutput(),
   useDictateInput(),
+  useWritingOutput(),
   usePaintOutput(),
   useDiscussionOutput(),
 ).subscribe();
