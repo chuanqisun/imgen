@@ -14,13 +14,16 @@
     <fieldset>
       <legend>Show</legend>
       <input id="camera-prompt" type="text" placeholder="goal" />
-      <button data-action="talk" data-talk="camera-prompt">Talk</button>
-      <video id="monitor" style="width: 200px; height: 200px"></video>
+      <button data-action="talk" data-talk="camera-prompt">Talk</button> <span id="cam-task-count"></span> Pending
+      <details>
+        <summary>Monitor</summary>
+        <video id="monitor" style="width: 200px; height: 200px" poster="https://placehold.co/200?text=STREAM"></video>
+      </details>
       <button id="cam-toggle">Start camera</button>
       <button id="cam-capture">Capture</button>
-      <label><input type="checkbox" id="auto-capture" /> Auto-capture</label>
+      <label><input type="checkbox" id="auto-capture" /> Auto-capture</label>&ensp;
+      <label><input type="checkbox" id="temporal-mode" /> Temporal</label>
       <pre><code id="cam-description"></code></pre>
-      <div>Pending <span id="cam-task-count"></span></div>
     </fieldset>
 
     <fieldset>

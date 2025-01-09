@@ -7,14 +7,16 @@ import {
   map,
   merge,
   mergeMap,
+  Observable,
   scan,
   switchMap,
   tap,
 } from "rxjs";
 import type { CameraNode } from "../ai-bar/lib/elements/camera-node";
 import type { LlmNode } from "../ai-bar/lib/elements/llm-node";
-import { system } from "../ai-bar/lib/message";
+import { system, user } from "../ai-bar/lib/message";
 import { $ } from "../dom";
+import { currentWorldXML } from "./shared";
 
 export function useShowInput() {
   const cameraNode = $<CameraNode>("camera-node")!;
@@ -25,6 +27,10 @@ export function useShowInput() {
   const camCaptureButton = $<HTMLButtonElement>("#cam-capture")!;
   const autoCaptureCheckbox = $<HTMLInputElement>("#auto-capture")!;
   const llmNode = $<LlmNode>("llm-node")!;
+  const temporalCheckbox = $<HTMLInputElement>("#temporal-mode")!;
+
+  /** HH:MM:SS */
+  const getTimestamp = () => new Date().toTimeString().split(" ")[0];
 
   const camToggle$ = fromEvent(camToggle, "click").pipe(
     tap((e) => {
@@ -34,6 +40,7 @@ export function useShowInput() {
         camToggle.textContent = "Stop camera";
       } else {
         cameraNode.stop();
+        camDescription.textContent = "";
         camToggle.textContent = "Start camera";
       }
     }),
@@ -107,9 +114,23 @@ Respond in XML with top level tags like this:
 
       camTaskCount.next(camTaskCount.value - 1);
 
+      const sceneTagPairMultiLinePattern = /<scene>([\s\S]*?)<\/scene>/;
+      const sceneTagPairMatch = response.match(sceneTagPairMultiLinePattern);
+      const sceneXMLContent = sceneTagPairMatch
+        ? `
+${temporalCheckbox.checked ? `<scene timestamp="${getTimestamp()}">` : "<scene>"}
+${sceneTagPairMatch[1]
+  .trim()
+  .split("\n")
+  .map((line) => `  ${line}`)
+  .join("\n")}
+</scene>
+      `.trim()
+        : "";
+
       return {
         startedAt,
-        xml: response,
+        xml: sceneXMLContent,
       };
     }),
     filter((output) => !!output.xml?.length),
@@ -129,5 +150,77 @@ Respond in XML with top level tags like this:
     }),
   );
 
-  return merge(camToggle$, camCap$, camTaskCountDisplay$);
+  const updateWorldModel$ = camCap$.pipe(
+    switchMap((newFrame) => {
+      const aoai = llmNode.getClient("aoai");
+      const abortController = new AbortController();
+      return new Observable((subscriber) => {
+        const task = aoai.chat.completions.create(
+          {
+            messages: [
+              system`You are modeling the world based on a series of images captured by a camera. ${temporalCheckbox.checked ? "The series of frames tell a coherent story that unfolds in time." : "The images are captured from different angles, representing different perspectives of the same subject"}
+Carefully analyze the incoming image and update the existing world model based on the new information.
+
+Syntax guideline
+- Be hierarchical and efficient. Add details when asked by user.
+- Avoid nesting too much. Prefer simple, obvious tag names.
+- Use arbitrary xml tags and attributes. Prefer tags over attributes.
+  - Use tags to describe subjects, objects, environments and entities.
+  - Use attribute to describe un-materialized property of a tag, such as style, material, lighting.
+- Use concise natural language where description is needed.
+- Spatial relationship must be explicitly described.
+
+Respond with the updated world model in XML with top level tags like this:
+${
+  temporalCheckbox.checked
+    ? `
+<world>
+  <event timestamp="HH:MM:SS">describe initial state</event>
+  <event timestamp="HH:MM:SS">summarize the change</event>
+  <event timestamp="HH:MM:SS">summarize the change</event>
+</world>
+  `.trim()
+    : `<world>...</world>`
+}
+        `,
+
+              user`
+${temporalCheckbox.checked ? "Previous" : "Observed"} world model:
+${currentWorldXML.value}
+
+${temporalCheckbox.checked ? "Newer" : "Alternative perspective"} image:
+${newFrame.xml}`,
+            ],
+            model: "gpt-4o",
+          },
+          {
+            signal: abortController.signal,
+          },
+        );
+
+        task
+          .then((content) => {
+            const newXML = content.choices.at(0)?.message.content ?? "";
+
+            const worldTagPairMultiLinePattern = /<world>([\s\S]*?)<\/world>/;
+            const worldTagPairMatch = newXML.match(worldTagPairMultiLinePattern);
+            const newXMLContent = worldTagPairMatch ? worldTagPairMatch[0] : "";
+            if (!newXMLContent) {
+              console.error("Invalid XML response", newXML);
+            } else {
+              currentWorldXML.next(newXMLContent);
+              subscriber.next(newXMLContent);
+            }
+          })
+          .catch((e) => console.error(e))
+          .finally(() => {
+            subscriber.complete();
+          });
+
+        return () => abortController.abort();
+      });
+    }),
+  );
+
+  return merge(camToggle$, camTaskCountDisplay$, updateWorldModel$);
 }
