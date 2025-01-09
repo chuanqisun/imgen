@@ -1,9 +1,14 @@
 # TODOs
 
-- Gossip output
+- Avatar visualization
 - Camera input
-- Save/Load memory frame
 - Editable memory
 - Prettier memory
 - Scene XML transform before NLP render
 - Markdown to HTML render
+- Merge time based memory frames
+
+# DONE
+
+- Gossip output
+- Save/Load memory frame
