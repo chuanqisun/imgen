@@ -16,7 +16,7 @@ import type { CameraNode } from "../ai-bar/lib/elements/camera-node";
 import type { LlmNode } from "../ai-bar/lib/elements/llm-node";
 import { system, user } from "../ai-bar/lib/message";
 import { $ } from "../dom";
-import { currentWorldXML } from "./shared";
+import { currentWorldXML, rewrite_xml, update_by_script } from "./shared";
 
 export function useShowInput() {
   const cameraNode = $<CameraNode>("camera-node")!;
@@ -152,16 +152,43 @@ ${sceneTagPairMatch[1]
 
   const updateWorldModel$ = camCap$.pipe(
     switchMap((newFrame) => {
+      const updateByScript = update_by_script.bind(null, currentWorldXML);
+      Object.defineProperty(updateByScript, "name", { value: "update_by_script" }); // protect from bundler mangling
+      const rewriteXml = rewrite_xml.bind(null, currentWorldXML);
+      Object.defineProperty(rewriteXml, "name", { value: "rewrite_xml" }); // protect from bundler mangling
+
       const aoai = llmNode.getClient("aoai");
       const abortController = new AbortController();
       return new Observable((subscriber) => {
-        const task = aoai.chat.completions.create(
+        const task = aoai.beta.chat.completions.runTools(
           {
             messages: [
               system`You are modeling the world based on a series of images captured by a camera. ${temporalCheckbox.checked ? "The series of frames tell a coherent story that unfolds in time." : "The images are captured from different angles, representing different perspectives of the same subject"}
 Carefully analyze the incoming image and update the existing world model based on the new information.
 
-Syntax guideline
+Now update the scene XML based on user provided instructions. You must use one of the following tools:
+- update_by_script tool. You need to pass a DOM manipulation javascript to the tool. 
+- rewrite_xml. You must rewrite the entire scene xml.
+
+${
+  temporalCheckbox.checked
+    ? `
+The updated XML should:
+- Focus on verbs, not nouns.
+- Reflect the temporal and causal relationship between the frames.
+- Tell a coherent story that unfolds in time.
+- Preserve previously captured information.
+- OK to describe change or motion
+
+Now use the tool to produce a world model like this and say "I'm done":
+<world>
+  <event timestamp="HH:MM:SS">...</event>
+  <event timestamp="HH:MM:SS">...</event>
+  ...
+</world>
+  `.trim()
+    : `
+The updated XML should:
 - Be hierarchical and efficient. Add details when asked by user.
 - Avoid nesting too much. Prefer simple, obvious tag names.
 - Use arbitrary xml tags and attributes. Prefer tags over attributes.
@@ -170,19 +197,10 @@ Syntax guideline
 - Use concise natural language where description is needed.
 - Spatial relationship must be explicitly described.
 
-Respond with the updated world model in XML with top level tags like this:
-${
-  temporalCheckbox.checked
-    ? `
-<world>
-  <event timestamp="HH:MM:SS">describe initial state</event>
-  <event timestamp="HH:MM:SS">summarize the change</event>
-  <event timestamp="HH:MM:SS">summarize the change</event>
-</world>
+Now use the tool and say "I'm done".
   `.trim()
-    : `<world>...</world>`
 }
-        `,
+  `,
 
               user`
 ${temporalCheckbox.checked ? "Previous" : "Observed"} world model:
@@ -190,6 +208,42 @@ ${currentWorldXML.value}
 
 ${temporalCheckbox.checked ? "Newer" : "Alternative perspective"} image:
 ${newFrame.xml}`,
+            ],
+            tools: [
+              {
+                type: "function",
+                function: {
+                  function: updateByScript,
+                  parse: JSON.parse,
+                  description: "Update the world model by executing a DOM manipulation javascript",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      script: {
+                        type: "string",
+                        description: "A DOM manipulation javascript. `document` is the root of the world",
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                type: "function",
+                function: {
+                  function: rewriteXml,
+                  parse: JSON.parse,
+                  description: "Rewrite the entire world xml",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      xml: {
+                        type: "string",
+                        description: "The new scene xml, top level tag must be <world>...</world>",
+                      },
+                    },
+                  },
+                },
+              },
             ],
             model: "gpt-4o",
           },
@@ -199,18 +253,9 @@ ${newFrame.xml}`,
         );
 
         task
+          .finalContent()
           .then((content) => {
-            const newXML = content.choices.at(0)?.message.content ?? "";
-
-            const worldTagPairMultiLinePattern = /<world>([\s\S]*?)<\/world>/;
-            const worldTagPairMatch = newXML.match(worldTagPairMultiLinePattern);
-            const newXMLContent = worldTagPairMatch ? worldTagPairMatch[0] : "";
-            if (!newXMLContent) {
-              console.error("Invalid XML response", newXML);
-            } else {
-              currentWorldXML.next(newXMLContent);
-              subscriber.next(newXMLContent);
-            }
+            subscriber.next(content);
           })
           .catch((e) => console.error(e))
           .finally(() => {
