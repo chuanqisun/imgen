@@ -1,4 +1,4 @@
-import { fromEvent, map, merge, tap, type BehaviorSubject, type Subscription } from "rxjs";
+import { filter, fromEvent, map, merge, tap, type BehaviorSubject, type Subscription } from "rxjs";
 import { z } from "zod";
 import type { OpenAIRealtimeNode } from "../ai-bar/lib/elements/openai-realtime-node";
 import { $, parseActionEvent } from "../dom";
@@ -111,5 +111,23 @@ ${modelPrompt.value ? `- The world model should be related to ${modelPrompt.valu
     ),
   );
 
-  return merge(interviewControl$, interviewPushToTalk$, alwaysOn$);
+  const autoMute$ = merge(
+    fromEvent(document, "mousedown").pipe(
+      map(parseActionEvent),
+      filter((e) => e.action === "talk"),
+      tap((_) => {
+        // when push-to-talk, mute realtime microphone
+        realtimeNode.muteMicrophone();
+      }),
+    ),
+    fromEvent(document, "mouseup").pipe(
+      map(parseActionEvent),
+      filter((e) => e.action === "talk"),
+      tap((_e) => {
+        realtimeNode.unmuteMicrophone();
+      }),
+    ),
+  );
+
+  return merge(interviewControl$, interviewPushToTalk$, alwaysOn$, autoMute$);
 }

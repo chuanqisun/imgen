@@ -9,7 +9,7 @@ import { $, parseActionEvent, preventDefault, stopPropagation } from "./lib/dom"
 import type { AzureSttNode } from "./lib/ai-bar/lib/elements/azure-stt-node";
 import { useDictateInput } from "./lib/sub-systems/dictate-input";
 import { useInterviewInput } from "./lib/sub-systems/interview-input";
-import { currentWorldXML, EMPTY_XML, rewrite_xml, update_by_script } from "./lib/sub-systems/shared";
+import { currentWorldXML, EMPTY_XML } from "./lib/sub-systems/shared";
 import { useWritingOutput } from "./lib/sub-systems/writing-output";
 import "./main.css";
 
@@ -76,11 +76,6 @@ writingOutput$.subscribe();
 // DICTATE SUB-SYSTEM
 const dictateInput$ = useDictateInput();
 dictateInput$.subscribe();
-
-const updateByScript = update_by_script.bind(null, currentWorldXML);
-Object.defineProperty(updateByScript, "name", { value: "update_by_script" }); // protect from bundler mangling
-const rewriteXml = rewrite_xml.bind(null, currentWorldXML);
-Object.defineProperty(rewriteXml, "name", { value: "rewrite_xml" }); // protect from bundler mangling
 
 const imagePrompt$ = fromEvent(renderButton, "click").pipe(
   withLatestFrom(currentWorldXML),
